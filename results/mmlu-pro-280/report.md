@@ -23,6 +23,21 @@ This measures whether the selected candidate answered gold; it also depends on c
 
 JEV minus Laya downstream: **2.50 pp**, stratified paired bootstrap 95% percentile CI **[-3.21, 8.21] pp** (10,000 seeded resamples; 20/category). Oracle gaps: JEV 12.14 pp; Laya 14.64 pp. Routing failures: {'jev': 0, 'laya': 0}; invalid candidate answers: {'first': 69, 'second': 0} (first/second respectively; truncations: {'first': 65, 'second': 0}). These are answer-budget-specific outcomes, not general routing skill. Neither interval proves equivalence.
 
+### Value over a fixed route (all prompts)
+
+Positive gain means the router answers more prompts correctly than always using that candidate. Wins / losses count paired prompts on which only the router / only the fixed policy answers correctly. The interval resamples paired prompts within category, not independently generated candidate responses.
+
+| Router | Fixed policy | Wins / losses | Net gain pp [95% paired CI] |
+|---|---|---:|---:|
+| JEV | Fixed qwen/qwen3.5-9b | 0 / 0 | +0.00 [0.00, 0.00] |
+| JEV | Fixed google/gemini-2.5-flash-lite | 42 / 34 | +2.86 [-2.86, 8.57] |
+| Laya | Fixed qwen/qwen3.5-9b | 33 / 40 | -2.50 [-8.21, 3.21] |
+| Laya | Fixed google/gemini-2.5-flash-lite | 2 / 1 | +0.36 [-0.71, 1.43] |
+
+Improvement over **both** fixed policies is required to claim useful accuracy routing for this pool; the best fixed policy is selected in hindsight here, so its comparison is descriptive, not a pre-registered significance test. Router failures count as incorrect. The oracle is an unattainable upper bound.
+
+### Category breakdown
+
 | Category | N | One-correct-only | JEV choice hits | Laya choice hits | JEV routed | Laya routed | qwen/qwen3.5-9b correct | google/gemini-2.5-flash-lite correct |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | biology | 20 | 4 | 1 | 3 | 16 | 18 | 16 | 18 |

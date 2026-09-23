@@ -68,6 +68,23 @@ def test_paired_bootstrap_preserves_category_sizes_and_direction():
     assert bootstrap(rows) == [100 / 3, 100 / 3]
 
 
+def test_fixed_policy_comparison_counts_switch_gains_and_router_failures():
+    from benchmark import fixed_comparisons
+
+    rows = [
+        {"category": "a", "first_correct": True, "second_correct": False, "jev_correct": True, "laya_correct": False},
+        {"category": "a", "first_correct": False, "second_correct": True, "jev_correct": True, "laya_correct": False},
+        {"category": "b", "first_correct": True, "second_correct": True, "jev_correct": False, "laya_correct": True},
+        {"category": "b", "first_correct": False, "second_correct": True, "jev_correct": True, "laya_correct": True},
+    ]
+    comparisons = fixed_comparisons(rows)
+    assert {k: comparisons["jev"]["first"][k] for k in ("better", "worse", "net_gain_pp")} == {
+        "better": 2, "worse": 1, "net_gain_pp": 25.0}
+    assert {k: comparisons["laya"]["second"][k] for k in ("better", "worse", "net_gain_pp")} == {
+        "better": 0, "worse": 1, "net_gain_pp": -25.0}
+    assert comparisons["laya"]["second"]["paired_bootstrap_95_ci_pp"][1] <= 0
+
+
 def test_curated_report_rejects_smoke_sample(tmp_path):
     from benchmark import atomic_json, digest, report
 

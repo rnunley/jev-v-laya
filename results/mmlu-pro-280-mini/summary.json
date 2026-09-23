@@ -543,6 +543,48 @@
     "oracle": 215,
     "second": 181
   },
+  "fixed_comparisons": {
+    "jev": {
+      "first": {
+        "better": 1,
+        "net_gain_pp": 0.35714285714285715,
+        "paired_bootstrap_95_ci_pp": [
+          0.0,
+          1.0714285714285714
+        ],
+        "worse": 0
+      },
+      "second": {
+        "better": 34,
+        "net_gain_pp": -0.35714285714285715,
+        "paired_bootstrap_95_ci_pp": [
+          -6.071428571428571,
+          5.357142857142857
+        ],
+        "worse": 35
+      }
+    },
+    "laya": {
+      "first": {
+        "better": 7,
+        "net_gain_pp": 0.0,
+        "paired_bootstrap_95_ci_pp": [
+          -2.5,
+          2.5
+        ],
+        "worse": 7
+      },
+      "second": {
+        "better": 27,
+        "net_gain_pp": -0.7142857142857143,
+        "paired_bootstrap_95_ci_pp": [
+          -5.714285714285714,
+          4.285714285714286
+        ],
+        "worse": 29
+      }
+    }
+  },
   "gap_to_oracle": {
     "jev": 0.125,
     "laya": 0.12857142857142856

@@ -390,16 +390,32 @@ def score_rows(rows):
     }
 
 
-def bootstrap(rows):
+def bootstrap(rows, left="jev_correct", right="laya_correct"):
     groups = defaultdict(list)
     for row in rows:
-        groups[row["category"]].append(int(row["jev_correct"]) - int(row["laya_correct"]))
+        groups[row["category"]].append(int(row[left]) - int(row[right]))
     rng = random.Random(SEED)
     draws = []
     for _ in range(10000):
         draws.append(100 * sum(rng.choice(values) for values in groups.values() for _ in values) / len(rows))
     draws.sort()
     return [draws[249], draws[9749]]
+
+
+def fixed_comparisons(rows):
+    """Paired router gains against both deployable fixed policies on all prompts."""
+    comparisons = {}
+    for router in ("jev", "laya"):
+        comparisons[router] = {}
+        for baseline in ("first", "second"):
+            better = sum(bool(row[f"{router}_correct"]) and not bool(row[f"{baseline}_correct"]) for row in rows)
+            worse = sum(bool(row[f"{baseline}_correct"]) and not bool(row[f"{router}_correct"]) for row in rows)
+            comparisons[router][baseline] = {
+                "better": better, "worse": worse,
+                "net_gain_pp": 100 * (better - worse) / len(rows),
+                "paired_bootstrap_95_ci_pp": bootstrap(rows, f"{router}_correct", f"{baseline}_correct"),
+            }
+    return comparisons
 
 
 def report(run, out=None):
@@ -460,6 +476,7 @@ def report(run, out=None):
     stats["truncated_answers"] = {slot: sum(rec.get("finish_reason") == "length"
                                                for rec in records[model].values())
                                   for slot, model in (("first", first), ("second", second))}
+    stats["fixed_comparisons"] = fixed_comparisons(rows)
     with ledger_lock(run) as (_, entries):
         stats["shared_ledger_usd"] = str(ledger_total(entries))
         unsettled = {entry["id"] for entry in entries if entry.get("event") == "reserve"} - {
@@ -505,6 +522,15 @@ def report(run, out=None):
                       f"**[{stats['choice_bootstrap_95_ci_pp'][0]:.2f}, "
                       f"{stats['choice_bootstrap_95_ci_pp'][1]:.2f}] pp**."
                       if n_choice else "No prompt distinguished the candidates; routing-choice accuracy is null.")
+    fixed_lines = [
+        f"| {router.upper() if router == 'jev' else 'Laya'} | Fixed {model} | "
+        f"{value['better']} / {value['worse']} | {value['net_gain_pp']:+.2f} "
+        f"[{value['paired_bootstrap_95_ci_pp'][0]:.2f}, "
+        f"{value['paired_bootstrap_95_ci_pp'][1]:.2f}] |"
+        for router in ("jev", "laya")
+        for slot, model in (("first", first), ("second", second))
+        for value in (stats["fixed_comparisons"][router][slot],)
+    ]
     text = f"""# JEV vs Laya: MMLU-Pro routing results ({first} vs {second})
 
 ## Results
@@ -529,6 +555,18 @@ This measures whether the selected candidate answered gold; it also depends on c
 | Per-prompt oracle (not deployable) | {fmt('oracle')} |
 
 JEV minus Laya downstream: **{stats['paired_difference_pp']:.2f} pp**, stratified paired bootstrap 95% percentile CI **[{stats['paired_bootstrap_95_ci_pp'][0]:.2f}, {stats['paired_bootstrap_95_ci_pp'][1]:.2f}] pp** (10,000 seeded resamples; 20/category). Oracle gaps: JEV {100*stats['gap_to_oracle']['jev']:.2f} pp; Laya {100*stats['gap_to_oracle']['laya']:.2f} pp. Routing failures: {stats['routing_failures']}; invalid candidate answers: {stats['invalid_answers']} (first/second respectively; truncations: {stats['truncated_answers']}). These are answer-budget-specific outcomes, not general routing skill. Neither interval proves equivalence.
+
+### Value over a fixed route (all prompts)
+
+Positive gain means the router answers more prompts correctly than always using that candidate. Wins / losses count paired prompts on which only the router / only the fixed policy answers correctly. The interval resamples paired prompts within category, not independently generated candidate responses.
+
+| Router | Fixed policy | Wins / losses | Net gain pp [95% paired CI] |
+|---|---|---:|---:|
+""" + "\n".join(fixed_lines) + f"""
+
+Improvement over **both** fixed policies is required to claim useful accuracy routing for this pool; the best fixed policy is selected in hindsight here, so its comparison is descriptive, not a pre-registered significance test. Router failures count as incorrect. The oracle is an unattainable upper bound.
+
+### Category breakdown
 
 | Category | N | One-correct-only | JEV choice hits | Laya choice hits | JEV routed | Laya routed | {first} correct | {second} correct |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
