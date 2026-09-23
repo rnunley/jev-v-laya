@@ -42,6 +42,14 @@ def questions_for(models):
                       "criteria": {model: MODEL_DESCRIPTIONS[model] for model in models}}}
 
 
+def route_questions(row, manifest):
+    questions = manifest["questions"]
+    if not row.get("reverse_order"):
+        return questions
+    question = questions["route"]
+    return {"route": {**question, "criteria": dict(reversed(list(question["criteria"].items())))}}
+
+
 PRICES = {QWEN: {"input": "0.08", "output": "0.13", "url": "https://openrouter.ai/qwen/qwen3.5-9b"}, MINI: {"input": "0.40", "output": "1.60", "url": "https://openrouter.ai/openai/gpt-4.1-mini"}, GEMINI: {"input": "0.10", "output": "0.40", "url": "https://openrouter.ai/google/gemini-2.5-flash-lite"}, JEV: {"input": "0.042", "output": "0", "url": "https://openrouter.ai/typesafe/jev-1.13/"}}
 BOUND_PRICES = {QWEN: {"input": "0.20", "output": "0.30"}, MINI: {"input": "0.50", "output": "2.00"}, GEMINI: {"input": "0.20", "output": "0.80"}}
 CAP = Decimal("5")
@@ -96,20 +104,95 @@ def parse_answer(text, option_count, finish_reason="stop"):
     return letter if isinstance(letter, str) and len(letter) == 1 and "A" <= letter <= chr(64 + option_count) else None
 
 
-def prepare(run, smoke=None, candidate_pool="qwen-gemini"):
+def prepare(run, smoke=None, candidate_pool="qwen-gemini", *, per_category=20, exclude_runs=(),
+            full_laya_context=False, counterbalance_order=False, pilot_summary=None):
     from datasets import load_dataset
+    if per_category < 1:
+        raise ValueError("Sample size per category must be positive")
     models = MODEL_POOLS[candidate_pool]
+    excluded_ids = set()
+    excluded_manifests = []
+    def normalize_question(text):
+        return " ".join(text.casefold().split())
+    excluded_texts = set()
+    for previous in exclude_runs:
+        previous_manifest, previous_rows, previous_hash = run_data(Path(previous))
+        if previous_manifest.get("dataset") != DATASET or previous_manifest.get("revision") != REVISION:
+            raise ValueError(f"Cannot exclude a different dataset or revision: {previous}")
+        excluded_ids.update(row["question_id"] for row in previous_rows
+                            if isinstance(row["question_id"], int))
+        excluded_texts.update(normalize_question(row["question"]) for row in previous_rows)
+        excluded_manifests.append(previous_hash)
+    laya_lengths = {}
+    context_excluded = 0
+    if full_laya_context:
+        from huggingface_hub import snapshot_download
+        from transformers import AutoTokenizer
+        from laya.common import build_sequence
+        model_path = snapshot_download(LAYA, revision=LAYA_REVISION,
+                                       allow_patterns=["rl_agent_config.json", "tokenizer/*"], local_dir=".cache/laya")
+        config = load(Path(model_path) / "rl_agent_config.json")
+        tokenizer = AutoTokenizer.from_pretrained(str(Path(model_path) / "tokenizer"))
+        question = questions_for(models)["route"]
+        internal = {"t": "choice", "ins": question["instructions"], "crit": question["criteria"]}
+        def fits(row):
+            nonlocal context_excluded
+            length = len(build_sequence(tokenizer, state(row), internal, max_len=100000,
+                                        head_max_len=config["head_max_len"])[0])
+            if length > config["max_len"]:
+                context_excluded += 1
+                return False
+            laya_lengths[row["question_id"]] = length
+            return True
     rows = load_dataset(DATASET, split="test", revision=REVISION)
     by_category = defaultdict(list)
     for row in rows:
         by_category[row["category"]].append(row)
     if len(by_category) != 14:
         raise ValueError(f"Expected 14 categories, got {len(by_category)}")
+    pilot_policy = None
+    if pilot_summary is not None:
+        pilot = load(pilot_summary)
+        if pilot["candidate_models"] != list(models) or set(pilot["category"]) != set(by_category):
+            raise ValueError("Pilot summary has a different candidate pool or categories")
+        fixed = models[0] if pilot["counts"]["first"] >= pilot["counts"]["second"] else models[1]
+        by_category_policy = {}
+        for category, score in pilot["category"].items():
+            first_hits, second_hits = score["counts"]["first"], score["counts"]["second"]
+            by_category_policy[category] = (models[0] if first_hits > second_hits else
+                                            models[1] if second_hits > first_hits else fixed)
+        pilot_policy = {"summary_sha256": digest(pilot), "fixed": fixed,
+                        "by_category": by_category_policy}
     rng = random.Random(SEED)
     chosen = []
+    order_by_id = {}
+    used_texts = set(excluded_texts)
+    duplicate_rows_removed = 0
     for category in sorted(by_category):
-        pool = sorted(by_category[category], key=lambda r: r["question_id"])
-        chosen.extend(rng.sample(pool, 20))
+        pool = sorted((row for row in by_category[category] if row["question_id"] not in excluded_ids),
+                      key=lambda row: row["question_id"])
+        if exclude_runs:
+            seen = set(used_texts)
+            unique_pool = []
+            for row in pool:
+                text = normalize_question(row["question"])
+                if text in seen:
+                    duplicate_rows_removed += 1
+                    continue
+                seen.add(text)
+                unique_pool.append(row)
+            pool = unique_pool
+        if full_laya_context:
+            pool = [row for row in pool if fits(row)]
+        if len(pool) < per_category:
+            raise ValueError(f"Only {len(pool)} unused questions in {category}")
+        sample = rng.sample(pool, per_category)
+        if counterbalance_order:
+            order_by_id.update({row["question_id"]: bool(i % 2)
+                                for i, row in enumerate(sorted(sample, key=lambda row: row["question_id"]))})
+        if exclude_runs:
+            used_texts.update(normalize_question(row["question"]) for row in sample)
+        chosen.extend(sample)
     chosen.sort(key=lambda r: r["question_id"])
     if smoke is not None:
         if not 1 <= smoke <= len(chosen):
@@ -124,8 +207,60 @@ def prepare(run, smoke=None, candidate_pool="qwen-gemini"):
         if qid in ids or not 1 <= len(opts) <= 10 or not 0 <= idx < len(opts) or row["answer"] != chr(65 + idx):
             raise ValueError(f"Invalid gold/options/duplicate for {qid}")
         ids.add(qid)
-        clean.append({"question_id": qid, "question": row["question"], "options": opts, "gold": row["answer"], "category": row["category"]})
-    manifest = {"dataset": DATASET, "dataset_url": "https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro", "revision": REVISION, "seed": SEED, "sample_per_category": 20, "smoke": smoke, "sample_ids": [r["question_id"] for r in clean], "questions_sha256": digest(clean), "candidate_models": list(models), "laya": {"model": LAYA, "revision": LAYA_REVISION, "device": "mps or cpu"}, "jev": JEV, "prices_usd_per_million": {model: PRICES[model] for model in (*models, JEV)}, "system": SYSTEM, "questions": questions_for(models), "temperature": 0, "max_tokens": MAX_TOKENS, "response_format_example": answer_format(10), "response_format_enum_policy": "A through the last listed option letter, per row", "provider_preferences": {"require_parameters": True}, "answer_endpoint": "https://openrouter.ai/api/v1/chat/completions", "route_endpoint": "https://openrouter.ai/api/alpha/decisions"}
+        item = {"question_id": qid, "question": row["question"], "options": opts,
+                "gold": row["answer"], "category": row["category"]}
+        if full_laya_context:
+            item["laya_tokens"] = laya_lengths[qid]
+        if counterbalance_order:
+            item["reverse_order"] = order_by_id[qid]
+        clean.append(item)
+    manifest = {
+        "dataset": DATASET,
+        "dataset_url": "https://huggingface.co/datasets/TIGER-Lab/MMLU-Pro",
+        "revision": REVISION,
+        "seed": SEED,
+        "sample_per_category": per_category,
+        "smoke": smoke,
+        "sample_ids": [row["question_id"] for row in clean],
+        "questions_sha256": digest(clean),
+        "candidate_models": list(models),
+        "laya": {"model": LAYA, "revision": LAYA_REVISION, "device": "mps or cpu"},
+        "jev": JEV,
+        "prices_usd_per_million": {model: PRICES[model] for model in (*models, JEV)},
+        "system": SYSTEM,
+        "questions": questions_for(models),
+        "temperature": 0,
+        "max_tokens": MAX_TOKENS,
+        "response_format_example": answer_format(10),
+        "response_format_enum_policy": "A through the last listed option letter, per row",
+        "provider_preferences": {"require_parameters": True},
+        "answer_endpoint": "https://openrouter.ai/api/v1/chat/completions",
+        "route_endpoint": "https://openrouter.ai/api/alpha/decisions",
+    }
+    if exclude_runs:
+        manifest.update({
+            "excluded_count": len(excluded_ids),
+            "excluded_ids_sha256": digest(sorted(excluded_ids)),
+            "excluded_manifest_sha256": sorted(excluded_manifests),
+            "excluded_question_texts_sha256": digest(sorted(excluded_texts)),
+            "duplicate_question_rows_removed": duplicate_rows_removed,
+        })
+    if full_laya_context:
+        manifest["laya_context_filter"] = {"max_len": config["max_len"],
+                                           "head_max_len": config["head_max_len"],
+                                           "excluded_long_states": context_excluded}
+    if counterbalance_order:
+        manifest["counterbalance_order"] = "alternating question ID within each category"
+    if pilot_policy is not None:
+        manifest["pilot_policy"] = pilot_policy
+        manifest["analysis_plan"] = {
+            "primary": "JEV minus Laya downstream accuracy on all questions",
+            "method": "10,000 seeded category-stratified paired bootstrap resamples by question",
+            "minimum_useful_gain_pp": 2,
+            "controls": ["both fixed candidates", "pilot-selected fixed candidate",
+                         "pilot-selected category rule", "selection-rate-matched random mixture"],
+            "stop": "complete frozen sample, no outcome-dependent stopping",
+        }
     run.mkdir(parents=True, exist_ok=True)
     for name, content in (("manifest.json", manifest), ("questions.json", clean)):
         path = run / name
@@ -348,11 +483,11 @@ def collect_routes(run, router, retry_errors=False):
         try:
             if router == "laya":
                 start = time.monotonic()
-                data = agent.predict(state(row), manifest["questions"])
+                data = agent.predict(state(row), route_questions(row, manifest))
                 result["duration_seconds"] = time.monotonic() - start
                 result["returned_model"] = LAYA + "@" + LAYA_REVISION
             else:
-                payload = {"model": JEV, "state": state(row), "questions": manifest["questions"]}
+                payload = {"model": JEV, "state": state(row), "questions": route_questions(row, manifest)}
                 data, result["duration_seconds"], result["cost"] = paid_retry(run, qid, requested, manifest["route_endpoint"], payload)
                 result["returned_model"] = data.get("model")
                 result["provider"] = data.get("provider")
@@ -375,6 +510,9 @@ def collect_routes(run, router, retry_errors=False):
 def score_rows(rows):
     n = len(rows)
     keys = {"jev": "jev_correct", "laya": "laya_correct", "first": "first_correct", "second": "second_correct", "oracle": "oracle_correct"}
+    if rows and "pilot_fixed_correct" in rows[0]:
+        keys.update({"pilot_fixed": "pilot_fixed_correct",
+                     "pilot_category": "pilot_category_correct"})
     counts = {k: sum(bool(r[v]) for r in rows) for k, v in keys.items()}
     counts["best_fixed_in_hindsight"] = max(counts["first"], counts["second"])
     distinguish = [r for r in rows if bool(r["first_correct"]) != bool(r["second_correct"])]
@@ -402,12 +540,12 @@ def bootstrap(rows, left="jev_correct", right="laya_correct"):
     return [draws[249], draws[9749]]
 
 
-def fixed_comparisons(rows):
-    """Paired router gains against both deployable fixed policies on all prompts."""
+def fixed_comparisons(rows, baselines=("first", "second")):
+    """Paired router gains against deployable fixed and pilot-selected policies."""
     comparisons = {}
     for router in ("jev", "laya"):
         comparisons[router] = {}
-        for baseline in ("first", "second"):
+        for baseline in baselines:
             better = sum(bool(row[f"{router}_correct"]) and not bool(row[f"{baseline}_correct"]) for row in rows)
             worse = sum(bool(row[f"{baseline}_correct"]) and not bool(row[f"{router}_correct"]) for row in rows)
             comparisons[router][baseline] = {
@@ -420,8 +558,9 @@ def fixed_comparisons(rows):
 
 def report(run, out=None):
     manifest, questions, manifest_hash = run_data(run)
-    if out is not None and len(questions) != 280:
-        raise ValueError("Curated output requires the complete 280-question sample")
+    if out is not None and (manifest.get("smoke") is not None
+                            or len(questions) != 14 * manifest.get("sample_per_category", 20)):
+        raise ValueError("Curated output requires the complete category-stratified sample")
     first, second = manifest["candidate_models"]
     models = (first, second)
     records = {model: {} for model in (*models, "jev", "laya")}
@@ -455,6 +594,14 @@ def report(run, out=None):
             selected = rec["selected_model"]
             row[f"{router}_correct"] = bool(selected and records[selected][qid]["correct"])
         row["oracle_correct"] = row["first_correct"] or row["second_correct"]
+        if "pilot_policy" in manifest:
+            policy = manifest["pilot_policy"]
+            row["pilot_fixed_correct"] = records[policy["fixed"]][qid]["correct"]
+            row["pilot_category_correct"] = records[policy["by_category"][question["category"]]][qid]["correct"]
+        if "counterbalance_order" in manifest:
+            row["reverse_order"] = question["reverse_order"]
+        if "laya_context_filter" in manifest:
+            row["laya_tokens"] = question["laya_tokens"]
         rows.append(row)
 
     stats = score_rows(rows)
@@ -476,7 +623,90 @@ def report(run, out=None):
     stats["truncated_answers"] = {slot: sum(rec.get("finish_reason") == "length"
                                                for rec in records[model].values())
                                   for slot, model in (("first", first), ("second", second))}
+    stats["invalid_finish_reasons"] = {}
+    for slot, model in (("first", first), ("second", second)):
+        reasons = defaultdict(int)
+        for rec in records[model].values():
+            if rec.get("choice") is None:
+                reasons[str(rec.get("finish_reason"))] += 1
+        stats["invalid_finish_reasons"][slot] = dict(sorted(reasons.items()))
     stats["fixed_comparisons"] = fixed_comparisons(rows)
+    if "pilot_policy" in manifest:
+        stats["pilot_policy"] = manifest["pilot_policy"]
+        stats["pilot_comparisons"] = fixed_comparisons(rows, ("pilot_fixed", "pilot_category"))
+        stats["matched_random"] = {}
+        for router in ("jev", "laya"):
+            choices = stats["selection_counts"][router]
+            expected = (choices[first] * stats["counts"]["first"] +
+                        choices[second] * stats["counts"]["second"]) / stats["n"]
+            stats["matched_random"][router] = {
+                "expected_correct": expected,
+                "observed_minus_expected_pp": 100 * (stats["counts"][router] - expected) / stats["n"],
+                "method": "query-independent mixture with the same model selection counts; failures score zero",
+            }
+    if "counterbalance_order" in manifest:
+        stats["order_audit"] = {
+            router: {str(reverse): {
+                "n": sum(row["reverse_order"] == reverse for row in rows),
+                "first_model_selected": sum(row["reverse_order"] == reverse and
+                                            row[f"{router}_selected_model"] == first for row in rows)}
+                for reverse in (False, True)}
+            for router in ("jev", "laya")}
+    stats["route_latency_seconds"] = {}
+    for router in ("jev", "laya"):
+        durations = sorted(rec["duration_seconds"] for rec in records[router].values()
+                           if rec["duration_seconds"] is not None)
+        stats["route_latency_seconds"][router] = {
+            "n": len(durations), "p50": durations[(len(durations) - 1) // 2],
+            "p95": durations[int((len(durations) - 1) * .95)]}
+    def billed(record):
+        amount = Decimal(str(record["cost"]))
+        if not amount.is_finite() or amount < 0:
+            raise ValueError("Invalid per-request billing in run record")
+        return amount
+    candidate_cost = {model: sum((billed(rec) for rec in records[model].values()), Decimal(0))
+                      for model in models}
+    policy_cost = {model: total for model, total in candidate_cost.items()}
+    for router in ("jev", "laya"):
+        total = Decimal(0)
+        for row in rows:
+            qid = row["question_id"]
+            route_record = records[router][qid]
+            selected = route_record["selected_model"]
+            if selected:
+                total += billed(records[selected][qid])
+            if router == "jev":
+                total += billed(route_record)
+        policy_cost[router] = total
+    if "pilot_policy" in manifest:
+        policy = manifest["pilot_policy"]
+        policy_cost["pilot_fixed"] = candidate_cost[policy["fixed"]]
+        policy_cost["pilot_category"] = sum(
+            billed(records[policy["by_category"][row["category"]]][row["question_id"]])
+            for row in rows)
+    stats["policy_api_usd_per_query"] = {name: str(total / stats["n"])
+                                         for name, total in policy_cost.items()}
+    if "matched_random" in stats:
+        stats["cost_matched_fixed_mixture"] = {}
+        first_avg = candidate_cost[first] / stats["n"]
+        second_avg = candidate_cost[second] / stats["n"]
+        for router in ("jev", "laya"):
+            choices = stats["selection_counts"][router]
+            mix_cost = ((choices[first] * first_avg + choices[second] * second_avg)
+                        / stats["n"])
+            if router == "jev":
+                mix_cost += sum((billed(rec) for rec in records["jev"].values()), Decimal(0)) / stats["n"]
+            stats["matched_random"][router]["expected_api_usd_per_query"] = str(mix_cost)
+            target = policy_cost[router] / stats["n"]
+            if first_avg == second_avg or not min(first_avg, second_avg) <= target <= max(first_avg, second_avg):
+                stats["cost_matched_fixed_mixture"][router] = None
+            else:
+                first_share = (target - second_avg) / (first_avg - second_avg)
+                expected = ((first_share * stats["counts"]["first"] +
+                             (1 - first_share) * stats["counts"]["second"]) / stats["n"])
+                stats["cost_matched_fixed_mixture"][router] = {
+                    "first_share": str(first_share), "expected_accuracy": float(expected),
+                    "target_api_usd_per_query": str(target)}
     with ledger_lock(run) as (_, entries):
         stats["shared_ledger_usd"] = str(ledger_total(entries))
         unsettled = {entry["id"] for entry in entries if entry.get("event") == "reserve"} - {
@@ -485,10 +715,14 @@ def report(run, out=None):
             raise ValueError("Unsettled paid requests; reconcile before publishing")
         spend = defaultdict(Decimal)
         for entry in entries:
-            if entry.get("event") != "reserve" and entry.get("cost") is not None:
+            if entry.get("event") not in ("reserve", "reconcile") and entry.get("cost") is not None:
                 spend[(entry["run"], entry["model"])] += Decimal(str(entry["cost"]))
         stats["spend_usd"] = {model: str(spend[(str(run), model)]) for model in (*models, JEV)}
         stats["run_spend_usd"] = str(sum((spend[(str(run), model)] for model in (*models, JEV)), Decimal(0)))
+        stats["bounded_unknown_usd"] = str(sum(
+            (Decimal(str(entry["cost"])) for entry in entries
+             if entry.get("run") == str(run) and entry.get("upper_bound_not_billed_cost")),
+            Decimal(0)))
         stats["unattributed_reconciled_usd"] = str(sum(
             (Decimal(str(entry["cost"])) for entry in entries if entry["model"] == "unattributed-key-usage"),
             Decimal(0)))
@@ -531,11 +765,121 @@ def report(run, out=None):
         for slot, model in (("first", first), ("second", second))
         for value in (stats["fixed_comparisons"][router][slot],)
     ]
+    study_label = ("Disjoint public-dataset holdout" if "pilot_policy" in manifest
+                   else "Equal-category sample")
+    control_section = ""
+    if "pilot_policy" in manifest:
+        policy = manifest["pilot_policy"]
+        pilot_lines = [
+            f"| {router.upper() if router == 'jev' else 'Laya'} | "
+            f"{'Pilot-fixed ' + policy['fixed'] if baseline == 'pilot_fixed' else 'Pilot category rule'} | "
+            f"{value['better']} / {value['worse']} | {value['net_gain_pp']:+.2f} "
+            f"[{value['paired_bootstrap_95_ci_pp'][0]:.2f}, "
+            f"{value['paired_bootstrap_95_ci_pp'][1]:.2f}] |"
+            for router in ("jev", "laya")
+            for baseline in ("pilot_fixed", "pilot_category")
+            for value in (stats["pilot_comparisons"][router][baseline],)]
+        random_lines = [
+            f"| {router.upper() if router == 'jev' else 'Laya'} | "
+            f"{stats['counts'][router]}/{stats['n']} | "
+            f"{stats['matched_random'][router]['expected_correct']:.2f}/{stats['n']} | "
+            f"{stats['matched_random'][router]['observed_minus_expected_pp']:+.3f} |"
+            for router in ("jev", "laya")]
+        cost_lines = [
+            f"| {label} | ${Decimal(stats['policy_api_usd_per_query'][name]):.8f} | "
+            f"{fmt(name) if name in stats['counts'] else fmt('first' if name == first else 'second')} |"
+            for name, label in ((first, f"Fixed {first}"), (second, f"Fixed {second}"),
+                                ("pilot_category", "Pilot category rule"),
+                                ("jev", "JEV + selected candidate"),
+                                ("laya", "Laya + selected candidate"))]
+        matched_cost_lines = [
+            f"| {router.upper() if router == 'jev' else 'Laya'} | "
+            + (f"{100 * value['expected_accuracy']:.2f}% "
+               f"(first-model share {100 * Decimal(value['first_share']):.1f}%)"
+               if value else "outside the fixed-model cost span") + " |"
+            for router, value in stats["cost_matched_fixed_mixture"].items()]
+        order_lines = [
+            f"| {router.upper() if router == 'jev' else 'Laya'} | "
+            f"{list(manifest['questions']['route']['criteria'])[int(reverse)]} first | "
+            f"{value['first_model_selected']}/{value['n']} |"
+            for router, orders in stats["order_audit"].items()
+            for reverse, value in ((False, orders["False"]), (True, orders["True"]))]
+        control_section = f"""
+
+### Frozen pilot policies
+
+The disjoint 280-question Mini/Gemini pilot selected fixed **{policy['fixed']}** and a category-to-model rule before this holdout was collected (pilot summary SHA-256 `{policy['summary_sha256']}`). Paired wins/losses and intervals below use all holdout questions.
+
+| Router | Pilot policy | Wins / losses | Net gain pp [95% paired CI] |
+|---|---|---:|---:|
+""" + "\n".join(pilot_lines) + f"""
+
+### Query-independent controls
+
+The random control permutes each router's observed numbers of first- and second-model selections over the same questions (failures remain zero). Its table is an *expectation*, not a sampled random run or an inferential interval; it measures item sensitivity at the observed call mix.
+
+| Router | Observed correct | Matched-mix expected correct | Observed − expected pp |
+|---|---:|---:|---:|
+""" + "\n".join(random_lines) + f"""
+
+### API cost at the observed operating points
+
+Per-question USD below is the selected answer model's actual billed cost plus the hosted JEV decision fee when applicable. Fixed and pilot policies would call only one answer model per query. Laya's local GPU/CPU, energy, and amortization cost is **unpriced**; these are not full comparable deployment costs. Collecting counterfactual answers for both models on every question, failed calls, and retries are separate experimental expenses, not included in these one-successful-call policy points. Uncertain charges are bounded separately in the ledger.
+
+| Policy | API USD / question | Accuracy |
+|---|---:|---:|
+""" + "\n".join(cost_lines) + f"""
+
+At each router's observed API-dollar budget, the query-independent fixed-model mixture has:
+
+| Router budget | Expected fixed-mixture accuracy |
+|---|---:|
+""" + "\n".join(matched_cost_lines) + f"""
+
+The cost-matched mixture is descriptive and selected from holdout costs; it is not a tuned-router curve or a pre-registered significance comparison. Option order was balanced 50/50 within each category (canonical un-reversed criteria list `{list(manifest['questions']['route']['criteria'])}`):
+
+| Router | Option order | {first} selected |
+|---|---|---:|
+""" + "\n".join(order_lines) + f"""
+
+Measured warm decision-call latency (Laya's local inference after model load versus JEV's hosted network request) is JEV p50/p95 **{stats['route_latency_seconds']['jev']['p50']:.3f}/{stats['route_latency_seconds']['jev']['p95']:.3f} s** and Laya **{stats['route_latency_seconds']['laya']['p50']:.3f}/{stats['route_latency_seconds']['laya']['p95']:.3f} s**. Hardware and network differ; this is not a hardware-normalized speed ranking.
+
+Eligibility required the full state, both model descriptions and question instructions to fit Laya's pinned {manifest['laya_context_filter']['max_len']}-token context; {manifest['laya_context_filter']['excluded_long_states']} remaining source rows were too long. The holdout also excludes {manifest['excluded_count']} previously sampled MMLU-Pro IDs and normalized exact duplicate question texts; {manifest['duplicate_question_rows_removed']} candidate rows were removed by text deduplication. Sampled questions are unique by ID and normalized text. This defines a short-input, equally weighted 14-category estimand, not the original MMLU-Pro population.
+
+The design uses [RouterBench](https://arxiv.org/abs/2403.12031)'s cached outcomes, fixed-policy and oracle controls, [RouteLLM](https://arxiv.org/abs/2406.18665)'s matched random-call-rate check, and [LLMRouterBench](https://arxiv.org/abs/2601.07206)'s same-pool evaluations. Neither fixed-choice router supplies a tested threshold sweep here: the two observed operating points are not a cost–quality curve.
+The direct [sysone-bench comparison](https://github.com/instax-dutta/sysone-bench/blob/master/REPORT.md) likewise checks byte-identical decision inputs and pinned versions; its triage/moderation outcomes are not answer-model-routing outcomes and are not imported as scores here.
+"""
+    pilot_accuracy_rows = (
+        f"| Pilot-fixed {manifest['pilot_policy']['fixed']} | {fmt('pilot_fixed')} |\n"
+        f"| Pilot category rule | {fmt('pilot_category')} |"
+        if "pilot_policy" in manifest else "")
+    context_caveat = (
+        "The short-input eligibility rule changes the target population"
+        if "laya_context_filter" in manifest else
+        "Laya's 512-token context may truncate long questions")
+    holdout_interpretation = ""
+    if "analysis_plan" in manifest:
+        lower, upper = stats["paired_bootstrap_95_ci_pp"]
+        margin = manifest["analysis_plan"]["minimum_useful_gain_pp"]
+        if upper < 0:
+            leader, lower_gain = "Laya", -upper
+        elif lower > 0:
+            leader, lower_gain = "JEV", lower
+        else:
+            leader, lower_gain = None, None
+        if leader:
+            verdict = "supports" if lower_gain >= margin else "does not establish"
+            holdout_interpretation = (f"**{leader} leads on the predeclared all-question contrast**, "
+                                      f"but the lower confidence bound for that lead is {lower_gain:.2f} pp. "
+                                      f"This {verdict} the predeclared {margin} pp minimum useful gain.")
+        else:
+            holdout_interpretation = (f"The predeclared all-question contrast does not resolve a direction; "
+                                      f"the minimum useful gain was set to {margin} pp before this holdout.")
     text = f"""# JEV vs Laya: MMLU-Pro routing results ({first} vs {second})
 
 ## Results
 
-Equal-category sample: **{stats['n']}** questions.
+{study_label}: **{stats['n']}** questions.
 
 ### Routing-choice accuracy (distinguishable prompts)
 
@@ -551,10 +895,13 @@ This measures whether the selected candidate answered gold; it also depends on c
 | Laya | {fmt('laya')} |
 | Fixed {first} | {fmt('first')} |
 | Fixed {second} | {fmt('second')} |
+{pilot_accuracy_rows}
 | Best fixed in hindsight (not deployable as selected here) | {fmt('best_fixed_in_hindsight')} |
 | Per-prompt oracle (not deployable) | {fmt('oracle')} |
 
-JEV minus Laya downstream: **{stats['paired_difference_pp']:.2f} pp**, stratified paired bootstrap 95% percentile CI **[{stats['paired_bootstrap_95_ci_pp'][0]:.2f}, {stats['paired_bootstrap_95_ci_pp'][1]:.2f}] pp** (10,000 seeded resamples; 20/category). Oracle gaps: JEV {100*stats['gap_to_oracle']['jev']:.2f} pp; Laya {100*stats['gap_to_oracle']['laya']:.2f} pp. Routing failures: {stats['routing_failures']}; invalid candidate answers: {stats['invalid_answers']} (first/second respectively; truncations: {stats['truncated_answers']}). These are answer-budget-specific outcomes, not general routing skill. Neither interval proves equivalence.
+JEV minus Laya downstream: **{stats['paired_difference_pp']:.2f} pp**, stratified paired bootstrap 95% percentile CI **[{stats['paired_bootstrap_95_ci_pp'][0]:.2f}, {stats['paired_bootstrap_95_ci_pp'][1]:.2f}] pp** (10,000 seeded resamples; {manifest['sample_per_category']}/category). Oracle gaps: JEV {100*stats['gap_to_oracle']['jev']:.2f} pp; Laya {100*stats['gap_to_oracle']['laya']:.2f} pp. Routing failures: {stats['routing_failures']}; invalid candidate answers: {stats['invalid_answers']} (first/second; finish reasons: {stats['invalid_finish_reasons']}; truncations: {stats['truncated_answers']}). These are answer-budget-specific outcomes, not general routing skill. Neither interval proves equivalence.
+
+{holdout_interpretation}
 
 ### Value over a fixed route (all prompts)
 
@@ -564,7 +911,9 @@ Positive gain means the router answers more prompts correctly than always using 
 |---|---|---:|---:|
 """ + "\n".join(fixed_lines) + f"""
 
-Improvement over **both** fixed policies is required to claim useful accuracy routing for this pool; the best fixed policy is selected in hindsight here, so its comparison is descriptive, not a pre-registered significance test. Router failures count as incorrect. The oracle is an unattainable upper bound.
+Improvement over **both** fixed policies is required to claim useful accuracy routing for this pool; the best fixed policy selected on this same sample is descriptive, not a pre-registered significance test. Router failures count as incorrect. The oracle is an unattainable upper bound.
+
+""" + control_section.strip("\n") + f"""
 
 ### Category breakdown
 
@@ -574,15 +923,14 @@ Improvement over **both** fixed policies is required to claim useful accuracy ro
 
 ## Method and provenance
 
-[MMLU-Pro]({manifest['dataset_url']}) MIT-licensed test split at `{REVISION}`; 20 rows selected per sorted category with Python `random.Random({SEED})` from question-ID-sorted rows, then question-ID sorted globally. Equal category weighting is **not** population-weighted MMLU-Pro. Question IDs/hash, prompt, Choice criteria, generation settings, requested model IDs, price-page links and revision are frozen in the local manifest; manifest SHA-256: `{manifest_hash}`. Public [scores](per_prompt.csv) and [machine summary](summary.json) enable independent score checks. Neither router receives gold or candidate answers.
-
+[MMLU-Pro]({manifest['dataset_url']}) MIT-licensed test split at `{REVISION}`; {manifest['sample_per_category']} rows selected per sorted category with Python `random.Random({SEED})` from question-ID-sorted rows after excluding {manifest.get('excluded_count', 0)} previously sampled question IDs, then question-ID sorted globally. Equal category weighting is **not** population-weighted MMLU-Pro. Question IDs/hash, excluded-ID and prior-manifest hashes, prompt, Choice criteria, generation settings, requested model IDs, price-page links and revision are frozen in the local manifest; manifest SHA-256: `{manifest_hash}`. Public [scores](per_prompt.csv) and [machine summary](summary.json) enable independent score checks. Neither router receives gold or candidate answers.
 Both hosted candidates receive the same zero-shot system message `{SYSTEM}` and `Question: ...\\\\nOptions: ...` state, temperature 0, max_tokens {MAX_TOKENS}; OpenRouter JSON-schema structured output requires `{{"answer": "X"}}` with a per-row enum of listed option letters (`provider.require_parameters=true`). Only a valid one-key JSON object with normal finish scores; invalid/truncated outputs score wrong. Routers see only the state and one identical Choice question, instructions `{manifest['questions']['route']['instructions']}`, criteria `{canonical(manifest['questions']['route']['criteria'])}`. Laya `{LAYA}` at `{LAYA_REVISION}` runs locally on MPS if available else CPU (512-token English context default); JEV `{JEV}` uses OpenRouter decisions. Requested/returned model IDs and provider identities actually returned: `{canonical(stats['returned_models_and_providers'])}`. Null provider means no provider identity was reported.
 
-HTTP 429/5xx retries at most twice when billed cost is known; 401/402/403, unknown cost, timeout and unknown billing stop. Append-only ledger includes earlier smoke, integration and both full runs. It stops at $4.95 before the next paid request; concurrent requests reserve $0.05 each strictly below the $5 ceiling, then settle to provider-reported cost. Provider-reported spend this run: `{canonical(stats['spend_usd'])}`; run total ${stats['run_spend_usd']}; shared ledger ${stats['shared_ledger_usd']}. The ledger includes ${stats['unattributed_reconciled_usd']} of key-usage reconciliation after earlier interrupted/unknown-billing calls; this is not attributed to a model or run. Local Laya has no OpenRouter cost.
+HTTP 429/5xx retries at most twice when billed cost is known; 401/402/403, unknown cost, timeout and unknown billing stop until key usage is reconciled or a conservative charge ceiling is reserved. The append-only shared ledger includes pilots and subsequent runs. It stops at $4.95 before the next paid request; concurrent requests reserve $0.05 each strictly below the $5 ceiling. Provider-reported charges this run: `{canonical(stats['spend_usd'])}`; recorded run total ${stats['run_spend_usd']}. A further **${stats['bounded_unknown_usd']}** is held as a conservative ceiling for timed-out requests with no per-generation billing ID; this is **not an observed charge**. Shared ledger exposure including this ceiling is ${stats['shared_ledger_usd']}, below $5. Historical unattributed key-usage reconciliation: ${stats['unattributed_reconciled_usd']}. Local Laya has no OpenRouter charge.
 
 ## Limits
 
-Academic multiple-choice questions do not measure production routing. Model descriptions are zero-shot metadata, not trained performance priors; one generation per candidate, even at temperature 0, can vary. The 512-token Laya context and answer budget can affect outcomes. This finite equal-category sample and bootstrap interval do not generalize automatically. Hosted JEV versus local Laya latency is not hardware-neutral. Best fixed uses hindsight; the oracle uses per-prompt gold and cannot be deployed. Router ties or overlapping uncertainty are not evidence of superiority.
+Academic multiple-choice questions do not measure production routing. Model descriptions are zero-shot metadata, not trained performance priors; one generation per candidate, even at temperature 0, can vary. {context_caveat}; answer budgets and public benchmark contamination remain possible. This equal-category sample and bootstrap interval do not generalize automatically. Hosted JEV versus local Laya latency is not hardware-neutral, and local compute is not free. The hindsight-best fixed score and per-prompt oracle cannot be deployed. A confidence interval crossing zero does not establish equivalence.
 """
     (dest / "report.md").write_text(text)
     print(f"Reported {stats['n']} questions at {dest}; shared spend ${stats['shared_ledger_usd']}")
@@ -644,6 +992,15 @@ def main():
     prep.add_argument("--run", type=Path, required=True)
     prep.add_argument("--smoke", type=int)
     prep.add_argument("--pool", choices=tuple(MODEL_POOLS), default="qwen-gemini")
+    prep.add_argument("--per-category", type=int, default=20, help="Complete sample size per category")
+    prep.add_argument("--exclude-run", type=Path, action="append", default=[],
+                      help="Exclude prior MMLU-Pro IDs and duplicate question texts (repeatable)")
+    prep.add_argument("--full-laya-context", action="store_true",
+                      help="Require the full question and option descriptions to fit Laya's context")
+    prep.add_argument("--counterbalance-order", action="store_true",
+                      help="Present each candidate first on half of each category")
+    prep.add_argument("--pilot-summary", type=Path,
+                      help="Freeze fixed and category policies from a disjoint pilot summary")
     answer = commands.add_parser("answer", help="Collect one hosted candidate's answers")
     answer.add_argument("--run", type=Path, required=True)
     answer.add_argument("--model", choices=tuple(MODEL_DESCRIPTIONS), required=True)
@@ -664,7 +1021,9 @@ def main():
         from dotenv import load_dotenv
         load_dotenv(Path(__file__).resolve().parent / ".env")
     if args.command == "prepare":
-        prepare(args.run, args.smoke, args.pool)
+        prepare(args.run, args.smoke, args.pool, per_category=args.per_category,
+                exclude_runs=args.exclude_run, full_laya_context=args.full_laya_context,
+                counterbalance_order=args.counterbalance_order, pilot_summary=args.pilot_summary)
     elif args.command == "answer":
         collect_answers(args.run, args.model, args.retry_errors, args.workers)
     elif args.command == "route":

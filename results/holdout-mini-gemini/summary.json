@@ -1,0 +1,848 @@
+{
+  "accuracy": {
+    "best_fixed_in_hindsight": 0.5828571428571429,
+    "first": 0.5828571428571429,
+    "jev": 0.5828571428571429,
+    "laya": 0.5985714285714285,
+    "oracle": 0.6871428571428572,
+    "pilot_category": 0.5835714285714285,
+    "pilot_fixed": 0.5757142857142857,
+    "second": 0.5757142857142857
+  },
+  "bounded_unknown_usd": "0.05",
+  "candidate_models": [
+    "openai/gpt-4.1-mini",
+    "google/gemini-2.5-flash-lite"
+  ],
+  "category": {
+    "biology": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.83,
+        "first": 0.76,
+        "jev": 0.76,
+        "laya": 0.8,
+        "oracle": 0.85,
+        "pilot_category": 0.83,
+        "pilot_fixed": 0.83,
+        "second": 0.83
+      },
+      "choice_hit_counts": {
+        "first": 2,
+        "jev": 2,
+        "laya": 6,
+        "second": 9
+      },
+      "choice_hit_rate": {
+        "first": 0.18181818181818182,
+        "jev": 0.18181818181818182,
+        "laya": 0.5454545454545454,
+        "second": 0.8181818181818182
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 83,
+        "first": 76,
+        "jev": 76,
+        "laya": 80,
+        "one_correct_only": 11,
+        "oracle": 85,
+        "pilot_category": 83,
+        "pilot_fixed": 83,
+        "second": 83
+      },
+      "gap_to_oracle": {
+        "jev": 0.09,
+        "laya": 0.05
+      },
+      "n": 100
+    },
+    "business": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.45,
+        "first": 0.43,
+        "jev": 0.43,
+        "laya": 0.44,
+        "oracle": 0.56,
+        "pilot_category": 0.45,
+        "pilot_fixed": 0.45,
+        "second": 0.45
+      },
+      "choice_hit_counts": {
+        "first": 11,
+        "jev": 11,
+        "laya": 12,
+        "second": 13
+      },
+      "choice_hit_rate": {
+        "first": 0.4583333333333333,
+        "jev": 0.4583333333333333,
+        "laya": 0.5,
+        "second": 0.5416666666666666
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 45,
+        "first": 43,
+        "jev": 43,
+        "laya": 44,
+        "one_correct_only": 24,
+        "oracle": 56,
+        "pilot_category": 45,
+        "pilot_fixed": 45,
+        "second": 45
+      },
+      "gap_to_oracle": {
+        "jev": 0.13,
+        "laya": 0.12
+      },
+      "n": 100
+    },
+    "chemistry": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.46,
+        "first": 0.46,
+        "jev": 0.46,
+        "laya": 0.47,
+        "oracle": 0.6,
+        "pilot_category": 0.44,
+        "pilot_fixed": 0.44,
+        "second": 0.44
+      },
+      "choice_hit_counts": {
+        "first": 16,
+        "jev": 16,
+        "laya": 17,
+        "second": 14
+      },
+      "choice_hit_rate": {
+        "first": 0.5333333333333333,
+        "jev": 0.5333333333333333,
+        "laya": 0.5666666666666667,
+        "second": 0.4666666666666667
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 46,
+        "first": 46,
+        "jev": 46,
+        "laya": 47,
+        "one_correct_only": 30,
+        "oracle": 60,
+        "pilot_category": 44,
+        "pilot_fixed": 44,
+        "second": 44
+      },
+      "gap_to_oracle": {
+        "jev": 0.14,
+        "laya": 0.13
+      },
+      "n": 100
+    },
+    "computer science": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.64,
+        "first": 0.64,
+        "jev": 0.64,
+        "laya": 0.65,
+        "oracle": 0.75,
+        "pilot_category": 0.64,
+        "pilot_fixed": 0.64,
+        "second": 0.64
+      },
+      "choice_hit_counts": {
+        "first": 11,
+        "jev": 11,
+        "laya": 12,
+        "second": 11
+      },
+      "choice_hit_rate": {
+        "first": 0.5,
+        "jev": 0.5,
+        "laya": 0.5454545454545454,
+        "second": 0.5
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 64,
+        "first": 64,
+        "jev": 64,
+        "laya": 65,
+        "one_correct_only": 22,
+        "oracle": 75,
+        "pilot_category": 64,
+        "pilot_fixed": 64,
+        "second": 64
+      },
+      "gap_to_oracle": {
+        "jev": 0.11,
+        "laya": 0.1
+      },
+      "n": 100
+    },
+    "economics": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.73,
+        "first": 0.73,
+        "jev": 0.73,
+        "laya": 0.72,
+        "oracle": 0.82,
+        "pilot_category": 0.73,
+        "pilot_fixed": 0.72,
+        "second": 0.72
+      },
+      "choice_hit_counts": {
+        "first": 10,
+        "jev": 10,
+        "laya": 9,
+        "second": 9
+      },
+      "choice_hit_rate": {
+        "first": 0.5263157894736842,
+        "jev": 0.5263157894736842,
+        "laya": 0.47368421052631576,
+        "second": 0.47368421052631576
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 73,
+        "first": 73,
+        "jev": 73,
+        "laya": 72,
+        "one_correct_only": 19,
+        "oracle": 82,
+        "pilot_category": 73,
+        "pilot_fixed": 72,
+        "second": 72
+      },
+      "gap_to_oracle": {
+        "jev": 0.09,
+        "laya": 0.1
+      },
+      "n": 100
+    },
+    "engineering": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.46,
+        "first": 0.43,
+        "jev": 0.43,
+        "laya": 0.47,
+        "oracle": 0.6,
+        "pilot_category": 0.46,
+        "pilot_fixed": 0.46,
+        "second": 0.46
+      },
+      "choice_hit_counts": {
+        "first": 14,
+        "jev": 14,
+        "laya": 18,
+        "second": 17
+      },
+      "choice_hit_rate": {
+        "first": 0.45161290322580644,
+        "jev": 0.45161290322580644,
+        "laya": 0.5806451612903226,
+        "second": 0.5483870967741935
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 46,
+        "first": 43,
+        "jev": 43,
+        "laya": 47,
+        "one_correct_only": 31,
+        "oracle": 60,
+        "pilot_category": 46,
+        "pilot_fixed": 46,
+        "second": 46
+      },
+      "gap_to_oracle": {
+        "jev": 0.17,
+        "laya": 0.13
+      },
+      "n": 100
+    },
+    "health": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.72,
+        "first": 0.72,
+        "jev": 0.72,
+        "laya": 0.72,
+        "oracle": 0.76,
+        "pilot_category": 0.72,
+        "pilot_fixed": 0.62,
+        "second": 0.62
+      },
+      "choice_hit_counts": {
+        "first": 14,
+        "jev": 14,
+        "laya": 14,
+        "second": 4
+      },
+      "choice_hit_rate": {
+        "first": 0.7777777777777778,
+        "jev": 0.7777777777777778,
+        "laya": 0.7777777777777778,
+        "second": 0.2222222222222222
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 72,
+        "first": 72,
+        "jev": 72,
+        "laya": 72,
+        "one_correct_only": 18,
+        "oracle": 76,
+        "pilot_category": 72,
+        "pilot_fixed": 62,
+        "second": 62
+      },
+      "gap_to_oracle": {
+        "jev": 0.04,
+        "laya": 0.04
+      },
+      "n": 100
+    },
+    "history": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.67,
+        "first": 0.62,
+        "jev": 0.62,
+        "laya": 0.71,
+        "oracle": 0.74,
+        "pilot_category": 0.62,
+        "pilot_fixed": 0.67,
+        "second": 0.67
+      },
+      "choice_hit_counts": {
+        "first": 7,
+        "jev": 7,
+        "laya": 16,
+        "second": 12
+      },
+      "choice_hit_rate": {
+        "first": 0.3684210526315789,
+        "jev": 0.3684210526315789,
+        "laya": 0.8421052631578947,
+        "second": 0.631578947368421
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 67,
+        "first": 62,
+        "jev": 62,
+        "laya": 71,
+        "one_correct_only": 19,
+        "oracle": 74,
+        "pilot_category": 62,
+        "pilot_fixed": 67,
+        "second": 67
+      },
+      "gap_to_oracle": {
+        "jev": 0.12,
+        "laya": 0.03
+      },
+      "n": 100
+    },
+    "law": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.48,
+        "first": 0.48,
+        "jev": 0.48,
+        "laya": 0.45,
+        "oracle": 0.59,
+        "pilot_category": 0.44,
+        "pilot_fixed": 0.44,
+        "second": 0.44
+      },
+      "choice_hit_counts": {
+        "first": 15,
+        "jev": 15,
+        "laya": 12,
+        "second": 11
+      },
+      "choice_hit_rate": {
+        "first": 0.5769230769230769,
+        "jev": 0.5769230769230769,
+        "laya": 0.46153846153846156,
+        "second": 0.4230769230769231
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 48,
+        "first": 48,
+        "jev": 48,
+        "laya": 45,
+        "one_correct_only": 26,
+        "oracle": 59,
+        "pilot_category": 44,
+        "pilot_fixed": 44,
+        "second": 44
+      },
+      "gap_to_oracle": {
+        "jev": 0.11,
+        "laya": 0.14
+      },
+      "n": 100
+    },
+    "math": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.48,
+        "first": 0.48,
+        "jev": 0.48,
+        "laya": 0.49,
+        "oracle": 0.61,
+        "pilot_category": 0.47,
+        "pilot_fixed": 0.47,
+        "second": 0.47
+      },
+      "choice_hit_counts": {
+        "first": 14,
+        "jev": 14,
+        "laya": 15,
+        "second": 13
+      },
+      "choice_hit_rate": {
+        "first": 0.5185185185185185,
+        "jev": 0.5185185185185185,
+        "laya": 0.5555555555555556,
+        "second": 0.48148148148148145
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 48,
+        "first": 48,
+        "jev": 48,
+        "laya": 49,
+        "one_correct_only": 27,
+        "oracle": 61,
+        "pilot_category": 47,
+        "pilot_fixed": 47,
+        "second": 47
+      },
+      "gap_to_oracle": {
+        "jev": 0.13,
+        "laya": 0.12
+      },
+      "n": 100
+    },
+    "other": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.68,
+        "first": 0.68,
+        "jev": 0.68,
+        "laya": 0.69,
+        "oracle": 0.73,
+        "pilot_category": 0.68,
+        "pilot_fixed": 0.62,
+        "second": 0.62
+      },
+      "choice_hit_counts": {
+        "first": 11,
+        "jev": 11,
+        "laya": 12,
+        "second": 5
+      },
+      "choice_hit_rate": {
+        "first": 0.6875,
+        "jev": 0.6875,
+        "laya": 0.75,
+        "second": 0.3125
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 68,
+        "first": 68,
+        "jev": 68,
+        "laya": 69,
+        "one_correct_only": 16,
+        "oracle": 73,
+        "pilot_category": 68,
+        "pilot_fixed": 62,
+        "second": 62
+      },
+      "gap_to_oracle": {
+        "jev": 0.05,
+        "laya": 0.04
+      },
+      "n": 100
+    },
+    "philosophy": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.61,
+        "first": 0.6,
+        "jev": 0.6,
+        "laya": 0.63,
+        "oracle": 0.71,
+        "pilot_category": 0.6,
+        "pilot_fixed": 0.61,
+        "second": 0.61
+      },
+      "choice_hit_counts": {
+        "first": 10,
+        "jev": 10,
+        "laya": 13,
+        "second": 11
+      },
+      "choice_hit_rate": {
+        "first": 0.47619047619047616,
+        "jev": 0.47619047619047616,
+        "laya": 0.6190476190476191,
+        "second": 0.5238095238095238
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 61,
+        "first": 60,
+        "jev": 60,
+        "laya": 63,
+        "one_correct_only": 21,
+        "oracle": 71,
+        "pilot_category": 60,
+        "pilot_fixed": 61,
+        "second": 61
+      },
+      "gap_to_oracle": {
+        "jev": 0.11,
+        "laya": 0.08
+      },
+      "n": 100
+    },
+    "physics": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.36,
+        "first": 0.34,
+        "jev": 0.34,
+        "laya": 0.36,
+        "oracle": 0.43,
+        "pilot_category": 0.36,
+        "pilot_fixed": 0.36,
+        "second": 0.36
+      },
+      "choice_hit_counts": {
+        "first": 7,
+        "jev": 7,
+        "laya": 9,
+        "second": 9
+      },
+      "choice_hit_rate": {
+        "first": 0.4375,
+        "jev": 0.4375,
+        "laya": 0.5625,
+        "second": 0.5625
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 36,
+        "first": 34,
+        "jev": 34,
+        "laya": 36,
+        "one_correct_only": 16,
+        "oracle": 43,
+        "pilot_category": 36,
+        "pilot_fixed": 36,
+        "second": 36
+      },
+      "gap_to_oracle": {
+        "jev": 0.09,
+        "laya": 0.07
+      },
+      "n": 100
+    },
+    "psychology": {
+      "accuracy": {
+        "best_fixed_in_hindsight": 0.79,
+        "first": 0.79,
+        "jev": 0.79,
+        "laya": 0.78,
+        "oracle": 0.87,
+        "pilot_category": 0.73,
+        "pilot_fixed": 0.73,
+        "second": 0.73
+      },
+      "choice_hit_counts": {
+        "first": 14,
+        "jev": 14,
+        "laya": 13,
+        "second": 8
+      },
+      "choice_hit_rate": {
+        "first": 0.6363636363636364,
+        "jev": 0.6363636363636364,
+        "laya": 0.5909090909090909,
+        "second": 0.36363636363636365
+      },
+      "counts": {
+        "best_fixed_in_hindsight": 79,
+        "first": 79,
+        "jev": 79,
+        "laya": 78,
+        "one_correct_only": 22,
+        "oracle": 87,
+        "pilot_category": 73,
+        "pilot_fixed": 73,
+        "second": 73
+      },
+      "gap_to_oracle": {
+        "jev": 0.08,
+        "laya": 0.09
+      },
+      "n": 100
+    }
+  },
+  "choice_bootstrap_95_ci_pp": [
+    -11.920529801324504,
+    -2.6490066225165565
+  ],
+  "choice_difference_pp": -7.284768211920534,
+  "choice_hit_counts": {
+    "first": 156,
+    "jev": 156,
+    "laya": 178,
+    "second": 146
+  },
+  "choice_hit_rate": {
+    "first": 0.5165562913907285,
+    "jev": 0.5165562913907285,
+    "laya": 0.5894039735099338,
+    "second": 0.48344370860927155
+  },
+  "cost_matched_fixed_mixture": {
+    "jev": null,
+    "laya": {
+      "expected_accuracy": 0.5811289911795254,
+      "first_share": "0.7580587651335652837145351486",
+      "target_api_usd_per_query": "0.00008705529642857142857142857143"
+    }
+  },
+  "counts": {
+    "best_fixed_in_hindsight": 816,
+    "first": 816,
+    "jev": 816,
+    "laya": 838,
+    "one_correct_only": 302,
+    "oracle": 962,
+    "pilot_category": 817,
+    "pilot_fixed": 806,
+    "second": 806
+  },
+  "fixed_comparisons": {
+    "jev": {
+      "first": {
+        "better": 0,
+        "net_gain_pp": 0.0,
+        "paired_bootstrap_95_ci_pp": [
+          0.0,
+          0.0
+        ],
+        "worse": 0
+      },
+      "second": {
+        "better": 156,
+        "net_gain_pp": 0.7142857142857143,
+        "paired_bootstrap_95_ci_pp": [
+          -1.7142857142857142,
+          3.2142857142857144
+        ],
+        "worse": 146
+      }
+    },
+    "laya": {
+      "first": {
+        "better": 41,
+        "net_gain_pp": 1.5714285714285714,
+        "paired_bootstrap_95_ci_pp": [
+          0.5,
+          2.642857142857143
+        ],
+        "worse": 19
+      },
+      "second": {
+        "better": 137,
+        "net_gain_pp": 2.2857142857142856,
+        "paired_bootstrap_95_ci_pp": [
+          0.14285714285714285,
+          4.428571428571429
+        ],
+        "worse": 105
+      }
+    }
+  },
+  "gap_to_oracle": {
+    "jev": 0.10428571428571429,
+    "laya": 0.08857142857142856
+  },
+  "invalid_answers": {
+    "first": 0,
+    "second": 2
+  },
+  "invalid_finish_reasons": {
+    "first": {},
+    "second": {
+      "error": 2
+    }
+  },
+  "manifest_sha256": "dca1bac7ec84d52d4ff62017fe43a2ab3174d40f43f050b066cbb17e67ec5be8",
+  "matched_random": {
+    "jev": {
+      "expected_api_usd_per_query": "0.0001296138232744897959183673469",
+      "expected_correct": 815.9571428571429,
+      "method": "query-independent mixture with the same model selection counts; failures score zero",
+      "observed_minus_expected_pp": 0.0030612244897919743
+    },
+    "laya": {
+      "expected_api_usd_per_query": "0.00008928335188928571428571428571",
+      "expected_correct": 813.85,
+      "method": "query-independent mixture with the same model selection counts; failures score zero",
+      "observed_minus_expected_pp": 1.7249999999999983
+    }
+  },
+  "n": 1400,
+  "order_audit": {
+    "jev": {
+      "False": {
+        "first_model_selected": 694,
+        "n": 700
+      },
+      "True": {
+        "first_model_selected": 700,
+        "n": 700
+      }
+    },
+    "laya": {
+      "False": {
+        "first_model_selected": 540,
+        "n": 700
+      },
+      "True": {
+        "first_model_selected": 559,
+        "n": 700
+      }
+    }
+  },
+  "paired_bootstrap_95_ci_pp": [
+    -2.642857142857143,
+    -0.5
+  ],
+  "paired_difference_pp": -1.571428571428568,
+  "pilot_comparisons": {
+    "jev": {
+      "pilot_category": {
+        "better": 93,
+        "net_gain_pp": -0.07142857142857142,
+        "paired_bootstrap_95_ci_pp": [
+          -2.0,
+          1.8571428571428572
+        ],
+        "worse": 94
+      },
+      "pilot_fixed": {
+        "better": 156,
+        "net_gain_pp": 0.7142857142857143,
+        "paired_bootstrap_95_ci_pp": [
+          -1.7142857142857142,
+          3.2142857142857144
+        ],
+        "worse": 146
+      }
+    },
+    "laya": {
+      "pilot_category": {
+        "better": 95,
+        "net_gain_pp": 1.5,
+        "paired_bootstrap_95_ci_pp": [
+          -0.2857142857142857,
+          3.357142857142857
+        ],
+        "worse": 74
+      },
+      "pilot_fixed": {
+        "better": 137,
+        "net_gain_pp": 2.2857142857142856,
+        "paired_bootstrap_95_ci_pp": [
+          0.14285714285714285,
+          4.428571428571429
+        ],
+        "worse": 105
+      }
+    }
+  },
+  "pilot_policy": {
+    "by_category": {
+      "biology": "google/gemini-2.5-flash-lite",
+      "business": "google/gemini-2.5-flash-lite",
+      "chemistry": "google/gemini-2.5-flash-lite",
+      "computer science": "openai/gpt-4.1-mini",
+      "economics": "openai/gpt-4.1-mini",
+      "engineering": "google/gemini-2.5-flash-lite",
+      "health": "openai/gpt-4.1-mini",
+      "history": "openai/gpt-4.1-mini",
+      "law": "google/gemini-2.5-flash-lite",
+      "math": "google/gemini-2.5-flash-lite",
+      "other": "openai/gpt-4.1-mini",
+      "philosophy": "openai/gpt-4.1-mini",
+      "physics": "google/gemini-2.5-flash-lite",
+      "psychology": "google/gemini-2.5-flash-lite"
+    },
+    "fixed": "google/gemini-2.5-flash-lite",
+    "summary_sha256": "68d838890dbf753ce4e19c671a6b05153f55287a1c4d57ca3d0d7a7c747a7709"
+  },
+  "policy_api_usd_per_query": {
+    "google/gemini-2.5-flash-lite": "0.000024363405",
+    "jev": "0.0001297155921428571428571428571",
+    "laya": "0.00008705529642857142857142857143",
+    "openai/gpt-4.1-mini": "0.0001070639742857142857142857143",
+    "pilot_category": "0.00005773460785714285714285714286",
+    "pilot_fixed": "0.000024363405"
+  },
+  "returned_models_and_providers": {
+    "google/gemini-2.5-flash-lite": [
+      [
+        "google/gemini-2.5-flash-lite",
+        "Google"
+      ]
+    ],
+    "jev": [
+      [
+        "typesafe/jev-1.13-20260917",
+        "TypeSafe"
+      ]
+    ],
+    "laya": [
+      [
+        "convaiinnovations/laya@1c5edc17a7acd8701df6fc341c0d179f1c62c982",
+        null
+      ]
+    ],
+    "openai/gpt-4.1-mini": [
+      [
+        "openai/gpt-4.1-mini",
+        "OpenAI"
+      ]
+    ]
+  },
+  "route_latency_seconds": {
+    "jev": {
+      "n": 1400,
+      "p50": 0.26264291699044406,
+      "p95": 0.36829054198460653
+    },
+    "laya": {
+      "n": 1400,
+      "p50": 0.05716341600054875,
+      "p95": 0.10130920796655118
+    }
+  },
+  "routing_failures": {
+    "jev": 0,
+    "laya": 0
+  },
+  "run_spend_usd": "0.216064323",
+  "selection_counts": {
+    "jev": {
+      "google/gemini-2.5-flash-lite": 6,
+      "openai/gpt-4.1-mini": 1394
+    },
+    "laya": {
+      "google/gemini-2.5-flash-lite": 301,
+      "openai/gpt-4.1-mini": 1099
+    }
+  },
+  "shared_ledger_usd": "0.57804812896",
+  "spend_usd": {
+    "google/gemini-2.5-flash-lite": "0.034108767",
+    "openai/gpt-4.1-mini": "0.149889564",
+    "typesafe/jev-1.13": "0.032065992"
+  },
+  "truncated_answers": {
+    "first": 0,
+    "second": 0
+  },
+  "unattributed_reconciled_usd": "0.0051852185"
+}

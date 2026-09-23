@@ -92,7 +92,7 @@ def test_curated_report_rejects_smoke_sample(tmp_path):
     row = {"question_id": 1, "question": "Q?", "options": ["A", "B"], "gold": "A", "category": "test"}
     atomic_json(run / "questions.json", [row])
     atomic_json(run / "manifest.json", {"questions_sha256": digest([row]), "sample_ids": [1]})
-    with pytest.raises(ValueError, match="280-question"):
+    with pytest.raises(ValueError):
         report(run, tmp_path / "published")
     assert not (tmp_path / "published").exists()
 
@@ -211,3 +211,45 @@ def test_comparison_requires_same_sample_and_is_idempotent(tmp_path):
     with pytest.raises(ValueError, match="mismatched"):
         compare_reports(original, alternate)
     assert (original / "report.md").read_text() == first_render
+
+
+def test_heldout_sample_excludes_prior_ids_and_duplicate_question_texts(tmp_path, monkeypatch):
+    from benchmark import DATASET, REVISION, atomic_json, digest, prepare
+    import json
+
+    previous = tmp_path / "pilot"
+    old = [{"question_id": 0, "question": "Shared question", "options": ["yes", "no"],
+            "answer": "A", "answer_index": 0, "category": "c0"}]
+    atomic_json(previous / "questions.json", old)
+    atomic_json(previous / "manifest.json", {
+        "dataset": DATASET, "revision": REVISION, "sample_ids": [0],
+        "questions_sha256": digest(old)})
+    source = [
+        {"question_id": i * 10 + j, "question": text, "options": ["yes", "no"],
+         "answer": "A", "answer_index": 0, "category": f"c{i}"}
+        for i in range(14)
+        for j, text in enumerate(
+            ("Shared question", "shared   QUESTION", f"Clean c{i}") if i == 0
+            else ("Clean c0", "Clean c1", "Other c1") if i == 1
+            else (f"Clean c{i}", f"Other c{i}", f"Third c{i}"))
+    ]
+    monkeypatch.setattr("datasets.load_dataset", lambda *_args, **_kwargs: source)
+    new = tmp_path / "holdout"
+    prepare(new, per_category=1, exclude_runs=(previous,))
+    rows = json.loads((new / "questions.json").read_text())
+    texts = [" ".join(row["question"].casefold().split()) for row in rows]
+    assert len(rows) == len(set(texts)) == 14
+    assert not ({0, 1} & {row["question_id"] for row in rows})
+    assert "shared question" not in texts
+
+
+def test_route_counterbalance_keeps_criteria_and_reverses_only_order():
+    from benchmark import route_questions
+
+    questions = {"route": {"type": "choice", "instructions": "choose",
+                           "criteria": {"model-a": "strong", "model-b": "cheap"}}}
+    plain = route_questions({"reverse_order": False}, {"questions": questions})
+    reversed_route = route_questions({"reverse_order": True}, {"questions": questions})
+    assert list(plain["route"]["criteria"]) == ["model-a", "model-b"]
+    assert list(reversed_route["route"]["criteria"]) == ["model-b", "model-a"]
+    assert reversed_route["route"]["criteria"] == plain["route"]["criteria"]

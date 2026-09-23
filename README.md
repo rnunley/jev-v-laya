@@ -1,75 +1,57 @@
-# JEV vs Laya: MMLU-Pro routing benchmark
+# JEV vs Laya: held-out MMLU-Pro routing benchmark
 
 ## Executive summary
 
-Two runs on the **same 280 MMLU-Pro prompts** compare locally run Laya and hosted JEV as routers between two OpenRouter answer models. The second run replaces only **Qwen3.5-9B with GPT-4.1 Mini**; Gemini, the sample, prompts, schema, settings, scoring and $5 shared spend ceiling stay fixed. Both candidates' answers and both routers' choices were collected anew.
+On a **disjoint 1,400-question, short-input MMLU-Pro holdout**, locally run Laya routed **838/1,400 (59.9%)** answers correctly; hosted JEV routed **816/1,400 (58.3%)**. The predeclared JEV−Laya difference is **−1.57 percentage points**, with a question-paired, category-stratified 95% bootstrap interval of **[−2.64, −0.50] pp**. Laya leads on this particular benchmark, but the interval does **not** establish the predeclared **2 pp minimum useful gain**. This is not a general claim about either model's other typed-decision tasks.
 
-| Candidate pool | Distinguishable prompts | JEV correct choice | Laya correct choice | JEV−Laya [95% paired CI] | JEV routed | Laya routed | Invalid first candidate |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Qwen / Gemini | 76 | 42/76 (55.3%) | 35/76 (46.1%) | +9.21 pp [−7.89, +27.63] | 189/280 (67.5%) | 182/280 (65.0%) | 69 (65 truncations) |
-| GPT-4.1 Mini / Gemini | 70 | 35/70 (50.0%) | 34/70 (48.6%) | +1.43 pp [−8.57, +11.43] | 180/280 (64.3%) | 179/280 (63.9%) | **0** |
+| Policy | Correct / 1,400 | API USD / query |
+|---|---:|---:|
+| Laya + selected candidate | 838 (59.9%) | $0.00008706 |
+| JEV + selected candidate | 816 (58.3%) | $0.00012972 |
+| Fixed GPT-4.1 Mini | 816 (58.3%) | $0.00010706 |
+| Fixed Gemini 2.5 Flash Lite | 806 (57.6%) | $0.00002436 |
+| Pilot-trained category rule | 817 (58.4%) | $0.00005773 |
+| Per-question oracle (unavailable in practice) | 962 (68.7%) | — |
 
-On the Mini pool, fixed Mini scored **179/280 (63.9%)**, fixed Gemini **181/280 (64.6%)**, and the per-prompt oracle **215/280 (76.8%)**. JEV selected Mini on **279/280** prompts; Laya selected Mini on **218/280**. JEV beat Laya on **8** prompts and lost on **7**. Neither pool's interval establishes a reliable routing-choice advantage, and neither demonstrates a clear gain over a fixed model. The one-correct-only denominator differs by pool; these are **within-pool** comparisons, not a causal test of the model swap.
+API cost includes the selected answer-model charge and JEV's hosted decision charge; **Laya's local compute is not priced**. These are observed one-successful-call operating points, not a threshold sweep or full deployment cost. JEV selected Mini on **1,394/1,400** items and tied always-Mini accuracy while adding an API fee. Laya selected Mini on **1,099/1,400**. Among **302** questions where exactly one candidate was correct, Laya selected that candidate **178** times versus JEV's **156** (Laya−JEV **+7.28 pp**, paired 95% CI **[+2.65, +11.92] pp**).
 
-The Mini run cost **$0.04428**; shared recorded spend across experiments and both full runs was **$0.29116**, below $5. Qwen's invalid/truncated outputs materially qualify the original result; Mini and Gemini each produced **0 invalid answers** in the second run.
+Laya's secondary paired gains over fixed Mini (**+1.57 pp**, 95% CI **[+0.50, +2.64]**) and fixed Gemini (**+2.29 pp**, **[+0.14, +4.43]**) are positive at nominal 95% confidence; these multiple secondary intervals were not multiplicity-adjusted. Its gain over the **pilot-trained category rule** is **+1.50 pp [−0.29, +3.36]**, unresolved. The fixed model chosen on the 280-question pilot was Gemini; it underperformed Mini on this holdout. Two Gemini answers ended with `finish_reason=error` and scored wrong; no router decision was missing.
 
-Read the [combined comparison and original report](results/mmlu-pro-280/report.md), original [summary](results/mmlu-pro-280/summary.json) and [per-prompt CSV](results/mmlu-pro-280/per_prompt.csv); second-pool [report](results/mmlu-pro-280-mini/report.md), [summary](results/mmlu-pro-280-mini/summary.json) and [per-prompt CSV](results/mmlu-pro-280-mini/per_prompt.csv). Raw responses, API key and model weights are not published.
+Read the [full held-out findings](results/holdout-mini-gemini/report.md), [machine summary](results/holdout-mini-gemini/summary.json), and [per-question scores](results/holdout-mini-gemini/per_prompt.csv). The earlier [Mini/Gemini](results/mmlu-pro-280-mini/report.md) and [Qwen/Gemini](results/mmlu-pro-280/report.md) runs are **development pilots**, not additional held-out tests; Qwen produced 69 invalid answers in its pilot (65 truncations).
 
-## Methodology (frozen)
+## Frozen protocol and external precedent
 
-- MMLU-Pro test @ `b189ec765aa7ed75c8acfea42df31fdae71f97be`, 20 per category sampled with seed `20260922`, question-ID sorted; exactly the same IDs and gold in both runs.
-- Pools: `qwen/qwen3.5-9b` + `google/gemini-2.5-flash-lite`, then `openai/gpt-4.1-mini` + the same Gemini ID. Temperature 0, max_tokens 4096, per-row JSON-schema enum of listed A–J letters, and `provider.require_parameters=true` in both.
-- Only a valid `{"answer":"X"}` JSON object with a listed letter and normal completion scores; invalid/truncated outputs count wrong.
-- Routers see identical state + one Choice question with literal criteria.
-- Laya: local convaiinnovations/laya @1c5edc17a7acd8701df6fc341c0d179f1c62c982 on MPS/CPU.
-- JEV: typesafe/jev-1.13 via OpenRouter /alpha/decisions.
-- Shared append-only ledger counts earlier experiments; stops new calls at $4.95 and reserves $0.05 per in-flight call, keeping total exposure strictly under the user-approved $5 cap.
-- Primary routing-choice score: among prompts where exactly one candidate answers gold, did the router select that candidate? Downstream routed accuracy is reported separately for all prompts.
+- The MMLU-Pro test revision is `b189ec765aa7ed75c8acfea42df31fdae71f97be`. Before requesting holdout outcomes, the manifest froze **100 questions per category**, seed `20260922`, the Mini/Gemini pool, a 2 pp minimum useful **absolute** router difference, the primary all-question JEV−Laya accuracy contrast, and a complete-sample stop rule. It excluded **430 previously sampled MMLU-Pro IDs** plus normalized duplicate question texts; 385 additional candidate rows were removed by text deduplication. All 1,400 published questions have unique IDs and normalized texts and no overlap with the retained pilot questions. The complete state and descriptions fit Laya's pinned 512-token context; 504 otherwise eligible source rows were too long. This estimates an **equally weighted, short-input 14-category population**, not native MMLU-Pro frequencies or production traffic.
+- Each answer model received the same zero-shot multiple-choice prompt, temperature 0, `max_tokens=4096`, strict per-row JSON-schema letter enum, and `provider.require_parameters=true`. Invalid or non-normal completions scored wrong. Both routers received the same question and candidate descriptions, with candidate presentation order balanced **700/700 within categories**. They saw neither gold nor candidate answers. Laya used `convaiinnovations/laya` at `1c5edc17a7acd8701df6fc341c0d179f1c62c982` locally; JEV used `typesafe/jev-1.13` via OpenRouter decisions. Neither router was trained on this holdout; the fixed-model and category policies were selected from the separate Mini/Gemini pilot.
+- The report compares both fixed candidates, the pilot-selected fixed Gemini and category rule, a query-independent random mixture at each router's observed selection rate, and an unattainable per-question oracle. The primary interval resamples paired **questions within category**, not independent candidate completions. The random and cost-matched mixtures are descriptive expectations, not inferential claims; no router threshold was swept. Candidate outputs are cached so both routers face the same observed answer outcomes.
+- This adapts [RouterBench](https://arxiv.org/abs/2403.12031)'s fixed-mixture/oracle and cost–quality controls, [RouteLLM](https://arxiv.org/abs/2406.18665)'s held-out and matched-random-call-rate design, and [LLMRouterBench](https://arxiv.org/abs/2601.07206)'s common-pool baseline comparisons. The direct [sysone-bench](https://github.com/instax-dutta/sysone-bench/blob/master/REPORT.md) comparison demonstrates pinned, byte-identical JEV/Laya inputs, but its classification results do not measure this answer-model-selection task.
 
-## Methodology review: what would measure routing skill
+## Reproduce
 
-The current runs are **diagnostic pilots, not evidence of adaptive routing**. On Qwen/Gemini, 69 Qwen outputs were invalid (65 length-truncated); the measured preference partly rewards an output-budget failure. JEV's two departures from always selecting Qwen changed no outcomes. On Mini/Gemini, only 70/280 prompts distinguish candidates (34 Mini-only wins, 36 Gemini-only wins); JEV switched away from Mini once. Its 35/70 choice hits are below fixed Gemini's 36/70. Laya's 14 switches on distinguishing prompts produced seven gains and seven losses relative to fixed Mini. Equal-category MMLU-Pro and a single answer per model say little about production traffic or expected model accuracy.
+With locally retained `runs/` records (not distributed), **no paid requests**:
 
-The existing reports now include **paired wins/losses and net accuracy gain against *each* fixed candidate**, with prompt-paired, category-stratified bootstrap intervals. This is a useful *negative control*: a router that just picks the first model should not be credited for matching a candidate's raw accuracy. The best fixed candidate chosen on these same prompts is descriptive; don't treat selecting it post hoc as a pre-registered statistical test. Routing-choice accuracy on the one-correct-only subset is still reported, but by itself it conceals whether routing improves end-to-end decisions.
-
-For a prospective benchmark:
-
-1. **Declare the target and baseline first.** Use a representative task mixture, with a frozen accuracy rubric and candidate inference settings. Preselect the best fixed policy *using pilot data* (and a simple category-to-model rule learned only from pilot data). On an untouched holdout, measure accuracy gain versus both fixed models and these pilot-trained policies, plus paired JEV−Laya gain. Count missing/invalid routes as failures; report the full holdout and category slices. If optimizing cost, predefine a price/latency utility and include inference **and router** cost rather than calling raw accuracy "routing value".
-2. **Pick a pair with headroom on a disjoint pilot.** Require low invalid-answer rates, comparable overall accuracy, meaningful complementary wins in both directions across task families, and enough one-correct-only prompts for a useful confidence interval. Do not choose the pair, thresholds, categories or questions using holdout candidate answers. Keep candidate IDs/provider versions, prompt, answer parser and price provenance fixed for the holdout. Qwen's invalid rate makes its current pool unsuitable for the primary claim.
-3. **Size for paired information, not total prompts.** Estimate pilot rates of one-correct-only outcomes and paired router disagreements, then simulate/power the predeclared smallest worthwhile gain and sample enough independent holdout prompts that its interval can distinguish gain from zero. At the Mini pilot's 70/280 informative rate, another 280 similarly drawn questions would again yield only about 70 informative decisions; a 1/70 hit difference cannot resolve a small advantage. Do not stop on favorable interim results. If balancing task categories rather than production frequency, state that estimand and publish category weights.
-4. **Audit shortcut policies.** Supply both routers the same full question, candidate descriptions and decision schema; check what actually fits Laya's 512-token context, or restrict both to a common short-prompt subset *before* outcome collection. Randomize/counterbalance candidate order and opaque option labels, mapping choices back to models, and measure flip consistency. Run a frozen metadata-only control and the pilot-trained category rule on the same holdout to distinguish item-sensitive decisions from always-first, model-brand or category priors. Do not let either router see gold or candidate answers.
-5. **Measure answer uncertainty.** Where provider nondeterminism matters, obtain several independent candidate completions per question under the same settings; estimate each candidate's success rate, not a single lucky outcome. Pair both routers on exactly the same questions and candidate observations, resample by *question* (never by individual completions), and disclose invalid rates separately. This requires a new, authorized paid run; the published 280-question scores cannot retroactively establish repeatability or remove selection bias.
-
-Until that holdout exists, the defensible conclusion is **no demonstrated advantage over fixed routing or between JEV and Laya** on these two academic pools, not that the routers are equivalent.
-
-## Reproduction
-
-Offline scoring from **locally retained raw run records** (not published):
 ```bash
 uv sync --extra dev --python 3.12
 uv run pytest -q tests/test_benchmark.py
-uv run python benchmark.py report --run runs/main-structured --out results/mmlu-pro-280
-uv run python benchmark.py report --run runs/main-mini-gemini --out results/mmlu-pro-280-mini
-uv run python benchmark.py compare --original results/mmlu-pro-280 --alternate results/mmlu-pro-280-mini
+uv run python benchmark.py report --run runs/holdout-mini-gemini --out results/holdout-mini-gemini
 ```
 
-Fresh collection below makes **paid external calls**; run only with your own authorization and budget. It reproduces the existing Mini/Gemini pilot, **not** the proposed held-out benchmark.
+The published CSV and summary allow independent recounts without raw inference records. To reconstruct the frozen sample locally, the five excluded pilot runs must also be retained:
 
 ```bash
-cp .env.example .env  # replace placeholder with your OpenRouter key
-BENCHMARK_INTEGRATION_POOL=mini-gemini RUN_OPENROUTER_INTEGRATION=1 uv run pytest -q -m integration tests/test_integration.py
-uv run python benchmark.py prepare --run runs/main-mini-gemini --pool mini-gemini
-uv run python benchmark.py answer --run runs/main-mini-gemini --model openai/gpt-4.1-mini
-uv run python benchmark.py answer --run runs/main-mini-gemini --model google/gemini-2.5-flash-lite
-uv run python benchmark.py route --run runs/main-mini-gemini --router laya
-uv run python benchmark.py route --run runs/main-mini-gemini --router jev
+uv run python benchmark.py prepare --run runs/holdout-mini-gemini --pool mini-gemini \
+  --per-category 100 --exclude-run runs/main-structured \
+  --exclude-run runs/pilot-math-history --exclude-run runs/pilot-mathqa-history \
+  --exclude-run runs/pilot-code-history --exclude-run runs/pilot-phi-gemini \
+  --full-laya-context --counterbalance-order \
+  --pilot-summary results/mmlu-pro-280-mini/summary.json
 ```
 
-The original Qwen results are published in `results/mmlu-pro-280/`; the fresh collection commands **do not call Qwen**. The opt-in three-question integration test verifies both candidates, both routers, the ledger and the joined report before the full run. Matching records resume without truncating the shared ledger. Eight candidate requests run concurrently by default; each reserves $0.05 and settles to provider-reported cost. Without local raw records, the published per-prompt CSV and summary permit independent recalculation of scores, but cannot reconstruct inference or model outputs.
+Fresh `benchmark.py answer` and hosted `benchmark.py route --router jev` requests **incur charges** and require an OpenRouter key; the existing run records resume without paying twice for completed rows. The append-only shared ledger stopped unknown billing until key usage was checked. The holdout's provider-reported run charges were **$0.216064323**, plus a **$0.05 conservative ceiling** for one transport-failed JEV request with no per-generation billing ID; that ceiling is *not an observed charge*. Cumulative ledger exposure is **$0.57804812896**, below the approved **$5 cap**. Raw responses, the API key, and model weights remain local.
 
 ## Limits
 
-Academic multiple-choice questions, one generation per candidate, zero-shot router metadata, and local-versus-hosted hardware differences restrict interpretation. A timeout or missing provider-reported cost stops paid calls until actual key usage is reconciled.
+Only one candidate completion per question was collected, even at temperature 0. Public MMLU-Pro items may occur in model pretraining; ID/text disjointness from our pilots does not prove decontamination. The short-input filter, hand-written model descriptions, equal-category weights, and local-Laya-versus-hosted-JEV hardware/network differences limit transfer. JEV's returned provider/model and Laya's checkpoint are in the machine summary. Laya's local hardware cost is unpriced, so API-dollar comparisons do not establish total cost efficiency. A confidence interval crossing zero on another task would not prove equivalence.
 
 ## License
 
