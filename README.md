@@ -2,18 +2,23 @@
 
 ## Executive summary
 
-On 280 equally sampled MMLU-Pro test questions, **76 distinguished the two candidates** (exactly one answered gold). JEV chose the correct candidate on **42/76 (55.3%)**; local Laya on **35/76 (46.1%)**. JEV–Laya routing-choice difference: **+9.21 percentage points**, 95% stratified paired bootstrap interval **[−7.89, +27.63] pp**. This interval includes zero; the sample does not establish a reliable advantage. Fixed Qwen also scores **42/76** on this conditional metric, fixed Gemini **34/76**; JEV chose Qwen on **278/280** prompts, Laya chose Gemini on **265/280**.
+Two runs on the **same 280 MMLU-Pro prompts** compare locally run Laya and hosted JEV as routers between two OpenRouter answer models. The second run replaces only **Qwen3.5-9B with GPT-4.1 Mini**; Gemini, the sample, prompts, schema, settings, scoring and $5 shared spend ceiling stay fixed. Both candidates' answers and both routers' choices were collected anew.
 
-Downstream routed accuracy across all 280: **JEV 189/280 (67.5%)**, **Laya 182/280 (65.0%)**; difference **+2.50 pp**, 95% interval **[−3.21, +8.21] pp**. Fixed Qwen scored **189/280 (67.5%)**, fixed Gemini **181/280 (64.6%)**, best fixed *in hindsight* **189/280**, and an undeployable per-prompt oracle **223/280 (79.6%)**. JEV's downstream score matched fixed Qwen; this run does not demonstrate a routing gain over that baseline.
+| Candidate pool | Distinguishable prompts | JEV correct choice | Laya correct choice | JEV−Laya [95% paired CI] | JEV routed | Laya routed | Invalid first candidate |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Qwen / Gemini | 76 | 42/76 (55.3%) | 35/76 (46.1%) | +9.21 pp [−7.89, +27.63] | 189/280 (67.5%) | 182/280 (65.0%) | 69 (65 truncations) |
+| GPT-4.1 Mini / Gemini | 70 | 35/70 (50.0%) | 34/70 (48.6%) | +1.43 pp [−8.57, +11.43] | 180/280 (64.3%) | 179/280 (63.9%) | **0** |
 
-**Qualification:** Qwen produced **69 invalid answers**, including **65 4,096-token truncations**; Gemini produced zero invalid answers. Routing-choice accuracy here measures selection under this answer budget and model pool, not general routing quality. The full run cost **$0.13636**; the shared ledger including abandoned protocol and integration checks recorded **$0.24647**, below the $5 cap.
+On the Mini pool, fixed Mini scored **179/280 (63.9%)**, fixed Gemini **181/280 (64.6%)**, and the per-prompt oracle **215/280 (76.8%)**. JEV selected Mini on **279/280** prompts; Laya selected Mini on **218/280**. Neither pool's interval establishes a reliable routing-choice advantage, and neither demonstrates a clear gain over a fixed model. The one-correct-only denominator differs by pool; these are **within-pool** comparisons, not a causal test of the model swap.
 
-Read the [full report](results/mmlu-pro-280/report.md), [machine-readable summary](results/mmlu-pro-280/summary.json), and [auditable per-prompt scores](results/mmlu-pro-280/per_prompt.csv). Raw responses, API key and model weights are not published.
+The Mini run cost **$0.04428**; shared recorded spend across experiments and both full runs was **$0.29116**, below $5. Qwen's invalid/truncated outputs materially qualify the original result; Mini and Gemini each produced **0 invalid answers** in the second run.
+
+Read the [combined comparison and original report](results/mmlu-pro-280/report.md), original [summary](results/mmlu-pro-280/summary.json) and [per-prompt CSV](results/mmlu-pro-280/per_prompt.csv); second-pool [report](results/mmlu-pro-280-mini/report.md), [summary](results/mmlu-pro-280-mini/summary.json) and [per-prompt CSV](results/mmlu-pro-280-mini/per_prompt.csv). Raw responses, API key and model weights are not published.
 
 ## Methodology (frozen)
 
-- MMLU-Pro test @ b189ec765aa7ed75c8acfea42df31fdae71f97be , 20 per category sampled with seed 20260922, question_id sorted.
-- Candidates: `qwen/qwen3.5-9b` and `google/gemini-2.5-flash-lite` on OpenRouter, temperature 0, max_tokens 4096, a per-row JSON-schema enum of listed A–J letters, and `provider.require_parameters=true`.
+- MMLU-Pro test @ `b189ec765aa7ed75c8acfea42df31fdae71f97be`, 20 per category sampled with seed `20260922`, question-ID sorted; exactly the same IDs and gold in both runs.
+- Pools: `qwen/qwen3.5-9b` + `google/gemini-2.5-flash-lite`, then `openai/gpt-4.1-mini` + the same Gemini ID. Temperature 0, max_tokens 4096, per-row JSON-schema enum of listed A–J letters, and `provider.require_parameters=true` in both.
 - Only a valid `{"answer":"X"}` JSON object with a listed letter and normal completion scores; invalid/truncated outputs count wrong.
 - Routers see identical state + one Choice question with literal criteria.
 - Laya: local convaiinnovations/laya @1c5edc17a7acd8701df6fc341c0d179f1c62c982 on MPS/CPU.
@@ -27,18 +32,17 @@ Read the [full report](results/mmlu-pro-280/report.md), [machine-readable summar
 uv sync --extra dev --python 3.12
 cp .env.example .env  # replace placeholder with your OpenRouter key
 uv run pytest -q tests/test_benchmark.py
-RUN_OPENROUTER_INTEGRATION=1 uv run pytest -q -m integration tests/test_integration.py
-uv run python benchmark.py prepare --run runs/main-structured
-uv run python benchmark.py answer --run runs/main-structured --model qwen/qwen3.5-9b
-uv run python benchmark.py answer --run runs/main-structured --model google/gemini-2.5-flash-lite
-uv run python benchmark.py route --run runs/main-structured --router laya
-uv run python benchmark.py route --run runs/main-structured --router jev
-uv run python benchmark.py report --run runs/main-structured --out results/mmlu-pro-280
+BENCHMARK_INTEGRATION_POOL=mini-gemini RUN_OPENROUTER_INTEGRATION=1 uv run pytest -q -m integration tests/test_integration.py
+uv run python benchmark.py prepare --run runs/main-mini-gemini --pool mini-gemini
+uv run python benchmark.py answer --run runs/main-mini-gemini --model openai/gpt-4.1-mini
+uv run python benchmark.py answer --run runs/main-mini-gemini --model google/gemini-2.5-flash-lite
+uv run python benchmark.py route --run runs/main-mini-gemini --router laya
+uv run python benchmark.py route --run runs/main-mini-gemini --router jev
+uv run python benchmark.py report --run runs/main-mini-gemini --out results/mmlu-pro-280-mini
+uv run python benchmark.py compare --original results/mmlu-pro-280 --alternate results/mmlu-pro-280-mini
 ```
 
-For a three-question smoke check, `prepare --run runs/smoke-structured --smoke 3` selects the first three full-sample IDs. The same four answer/router commands with `runs/smoke-structured` precede `report --run runs/smoke-structured` (no public `--out`). Candidate and JEV calls still incur OpenRouter charges; only Laya runs locally. Repeated commands reuse matching records and never truncate the shared ledger.
-
-The opt-in integration test issues fresh paid calls against three public questions, runs Laya locally, and verifies the joined report. Candidate collection uses eight concurrent requests per model by default; the shared ledger reserves $0.05 per in-flight call and settles to provider-reported cost. It fails closed if billing becomes unknown.
+The original Qwen results are published in `results/mmlu-pro-280/`; these commands **do not call Qwen**. Reproduction of the second pool issues fresh paid requests; the opt-in three-question integration test verifies both candidates, both routers, the ledger and the joined report before the full run. Matching records resume without truncating the shared ledger. Eight candidate requests run concurrently by default; each reserves $0.05 and settles to provider-reported cost.
 
 ## Limits
 

@@ -1,42 +1,46 @@
 {
   "accuracy": {
     "best_fixed_in_hindsight": 0.675,
-    "gemini": 0.6464285714285715,
+    "first": 0.675,
     "jev": 0.675,
     "laya": 0.65,
     "oracle": 0.7964285714285714,
-    "qwen": 0.675
+    "second": 0.6464285714285715
   },
+  "candidate_models": [
+    "qwen/qwen3.5-9b",
+    "google/gemini-2.5-flash-lite"
+  ],
   "category": {
     "biology": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.9,
-        "gemini": 0.9,
+        "first": 0.8,
         "jev": 0.8,
         "laya": 0.9,
         "oracle": 0.95,
-        "qwen": 0.8
+        "second": 0.9
       },
       "choice_hit_counts": {
-        "gemini": 3,
+        "first": 1,
         "jev": 1,
         "laya": 3,
-        "qwen": 1
+        "second": 3
       },
       "choice_hit_rate": {
-        "gemini": 0.75,
+        "first": 0.25,
         "jev": 0.25,
         "laya": 0.75,
-        "qwen": 0.25
+        "second": 0.75
       },
       "counts": {
         "best_fixed_in_hindsight": 18,
-        "gemini": 18,
+        "first": 16,
         "jev": 16,
         "laya": 18,
         "one_correct_only": 4,
         "oracle": 19,
-        "qwen": 16
+        "second": 18
       },
       "gap_to_oracle": {
         "jev": 0.15,
@@ -47,32 +51,32 @@
     "business": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.85,
-        "gemini": 0.55,
+        "first": 0.85,
         "jev": 0.85,
         "laya": 0.6,
         "oracle": 0.85,
-        "qwen": 0.85
+        "second": 0.55
       },
       "choice_hit_counts": {
-        "gemini": 0,
+        "first": 6,
         "jev": 6,
         "laya": 1,
-        "qwen": 6
+        "second": 0
       },
       "choice_hit_rate": {
-        "gemini": 0.0,
+        "first": 1.0,
         "jev": 1.0,
         "laya": 0.16666666666666666,
-        "qwen": 1.0
+        "second": 0.0
       },
       "counts": {
         "best_fixed_in_hindsight": 17,
-        "gemini": 11,
+        "first": 17,
         "jev": 17,
         "laya": 12,
         "one_correct_only": 6,
         "oracle": 17,
-        "qwen": 17
+        "second": 11
       },
       "gap_to_oracle": {
         "jev": 0.0,
@@ -83,32 +87,32 @@
     "chemistry": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.55,
-        "gemini": 0.55,
+        "first": 0.45,
         "jev": 0.45,
         "laya": 0.55,
         "oracle": 0.7,
-        "qwen": 0.45
+        "second": 0.55
       },
       "choice_hit_counts": {
-        "gemini": 5,
+        "first": 3,
         "jev": 3,
         "laya": 5,
-        "qwen": 3
+        "second": 5
       },
       "choice_hit_rate": {
-        "gemini": 0.625,
+        "first": 0.375,
         "jev": 0.375,
         "laya": 0.625,
-        "qwen": 0.375
+        "second": 0.625
       },
       "counts": {
         "best_fixed_in_hindsight": 11,
-        "gemini": 11,
+        "first": 9,
         "jev": 9,
         "laya": 11,
         "one_correct_only": 8,
         "oracle": 14,
-        "qwen": 9
+        "second": 11
       },
       "gap_to_oracle": {
         "jev": 0.25,
@@ -119,32 +123,32 @@
     "computer science": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.75,
-        "gemini": 0.55,
+        "first": 0.75,
         "jev": 0.75,
         "laya": 0.55,
         "oracle": 0.8,
-        "qwen": 0.75
+        "second": 0.55
       },
       "choice_hit_counts": {
-        "gemini": 1,
+        "first": 5,
         "jev": 5,
         "laya": 1,
-        "qwen": 5
+        "second": 1
       },
       "choice_hit_rate": {
-        "gemini": 0.16666666666666666,
+        "first": 0.8333333333333334,
         "jev": 0.8333333333333334,
         "laya": 0.16666666666666666,
-        "qwen": 0.8333333333333334
+        "second": 0.16666666666666666
       },
       "counts": {
         "best_fixed_in_hindsight": 15,
-        "gemini": 11,
+        "first": 15,
         "jev": 15,
         "laya": 11,
         "one_correct_only": 6,
         "oracle": 16,
-        "qwen": 15
+        "second": 11
       },
       "gap_to_oracle": {
         "jev": 0.05,
@@ -155,32 +159,32 @@
     "economics": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.85,
-        "gemini": 0.75,
+        "first": 0.85,
         "jev": 0.85,
         "laya": 0.75,
         "oracle": 0.85,
-        "qwen": 0.85
+        "second": 0.75
       },
       "choice_hit_counts": {
-        "gemini": 0,
+        "first": 2,
         "jev": 2,
         "laya": 0,
-        "qwen": 2
+        "second": 0
       },
       "choice_hit_rate": {
-        "gemini": 0.0,
+        "first": 1.0,
         "jev": 1.0,
         "laya": 0.0,
-        "qwen": 1.0
+        "second": 0.0
       },
       "counts": {
         "best_fixed_in_hindsight": 17,
-        "gemini": 15,
+        "first": 17,
         "jev": 17,
         "laya": 15,
         "one_correct_only": 2,
         "oracle": 17,
-        "qwen": 17
+        "second": 15
       },
       "gap_to_oracle": {
         "jev": 0.0,
@@ -191,32 +195,32 @@
     "engineering": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.55,
-        "gemini": 0.55,
+        "first": 0.55,
         "jev": 0.55,
         "laya": 0.55,
         "oracle": 0.8,
-        "qwen": 0.55
+        "second": 0.55
       },
       "choice_hit_counts": {
-        "gemini": 5,
+        "first": 5,
         "jev": 5,
         "laya": 5,
-        "qwen": 5
+        "second": 5
       },
       "choice_hit_rate": {
-        "gemini": 0.5,
+        "first": 0.5,
         "jev": 0.5,
         "laya": 0.5,
-        "qwen": 0.5
+        "second": 0.5
       },
       "counts": {
         "best_fixed_in_hindsight": 11,
-        "gemini": 11,
+        "first": 11,
         "jev": 11,
         "laya": 11,
         "one_correct_only": 10,
         "oracle": 16,
-        "qwen": 11
+        "second": 11
       },
       "gap_to_oracle": {
         "jev": 0.25,
@@ -227,32 +231,32 @@
     "health": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.65,
-        "gemini": 0.6,
+        "first": 0.65,
         "jev": 0.65,
         "laya": 0.65,
         "oracle": 0.75,
-        "qwen": 0.65
+        "second": 0.6
       },
       "choice_hit_counts": {
-        "gemini": 2,
+        "first": 3,
         "jev": 3,
         "laya": 3,
-        "qwen": 3
+        "second": 2
       },
       "choice_hit_rate": {
-        "gemini": 0.4,
+        "first": 0.6,
         "jev": 0.6,
         "laya": 0.6,
-        "qwen": 0.6
+        "second": 0.4
       },
       "counts": {
         "best_fixed_in_hindsight": 13,
-        "gemini": 12,
+        "first": 13,
         "jev": 13,
         "laya": 13,
         "one_correct_only": 5,
         "oracle": 15,
-        "qwen": 13
+        "second": 12
       },
       "gap_to_oracle": {
         "jev": 0.1,
@@ -263,32 +267,32 @@
     "history": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.6,
-        "gemini": 0.6,
+        "first": 0.4,
         "jev": 0.4,
         "laya": 0.6,
         "oracle": 0.6,
-        "qwen": 0.4
+        "second": 0.6
       },
       "choice_hit_counts": {
-        "gemini": 4,
+        "first": 0,
         "jev": 0,
         "laya": 4,
-        "qwen": 0
+        "second": 4
       },
       "choice_hit_rate": {
-        "gemini": 1.0,
+        "first": 0.0,
         "jev": 0.0,
         "laya": 1.0,
-        "qwen": 0.0
+        "second": 1.0
       },
       "counts": {
         "best_fixed_in_hindsight": 12,
-        "gemini": 12,
+        "first": 8,
         "jev": 8,
         "laya": 12,
         "one_correct_only": 4,
         "oracle": 12,
-        "qwen": 8
+        "second": 12
       },
       "gap_to_oracle": {
         "jev": 0.2,
@@ -299,32 +303,32 @@
     "law": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.6,
-        "gemini": 0.6,
+        "first": 0.35,
         "jev": 0.35,
         "laya": 0.6,
         "oracle": 0.65,
-        "qwen": 0.35
+        "second": 0.6
       },
       "choice_hit_counts": {
-        "gemini": 6,
+        "first": 1,
         "jev": 1,
         "laya": 6,
-        "qwen": 1
+        "second": 6
       },
       "choice_hit_rate": {
-        "gemini": 0.8571428571428571,
+        "first": 0.14285714285714285,
         "jev": 0.14285714285714285,
         "laya": 0.8571428571428571,
-        "qwen": 0.14285714285714285
+        "second": 0.8571428571428571
       },
       "counts": {
         "best_fixed_in_hindsight": 12,
-        "gemini": 12,
+        "first": 7,
         "jev": 7,
         "laya": 12,
         "one_correct_only": 7,
         "oracle": 13,
-        "qwen": 7
+        "second": 12
       },
       "gap_to_oracle": {
         "jev": 0.3,
@@ -335,32 +339,32 @@
     "math": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.85,
-        "gemini": 0.55,
+        "first": 0.85,
         "jev": 0.85,
         "laya": 0.55,
         "oracle": 0.9,
-        "qwen": 0.85
+        "second": 0.55
       },
       "choice_hit_counts": {
-        "gemini": 1,
+        "first": 7,
         "jev": 7,
         "laya": 1,
-        "qwen": 7
+        "second": 1
       },
       "choice_hit_rate": {
-        "gemini": 0.125,
+        "first": 0.875,
         "jev": 0.875,
         "laya": 0.125,
-        "qwen": 0.875
+        "second": 0.125
       },
       "counts": {
         "best_fixed_in_hindsight": 17,
-        "gemini": 11,
+        "first": 17,
         "jev": 17,
         "laya": 11,
         "one_correct_only": 8,
         "oracle": 18,
-        "qwen": 17
+        "second": 11
       },
       "gap_to_oracle": {
         "jev": 0.05,
@@ -371,32 +375,32 @@
     "other": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.65,
-        "gemini": 0.65,
+        "first": 0.6,
         "jev": 0.6,
         "laya": 0.65,
         "oracle": 0.7,
-        "qwen": 0.6
+        "second": 0.65
       },
       "choice_hit_counts": {
-        "gemini": 2,
+        "first": 1,
         "jev": 1,
         "laya": 2,
-        "qwen": 1
+        "second": 2
       },
       "choice_hit_rate": {
-        "gemini": 0.6666666666666666,
+        "first": 0.3333333333333333,
         "jev": 0.3333333333333333,
         "laya": 0.6666666666666666,
-        "qwen": 0.3333333333333333
+        "second": 0.6666666666666666
       },
       "counts": {
         "best_fixed_in_hindsight": 13,
-        "gemini": 13,
+        "first": 12,
         "jev": 12,
         "laya": 13,
         "one_correct_only": 3,
         "oracle": 14,
-        "qwen": 12
+        "second": 13
       },
       "gap_to_oracle": {
         "jev": 0.1,
@@ -407,32 +411,32 @@
     "philosophy": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.75,
-        "gemini": 0.75,
+        "first": 0.7,
         "jev": 0.7,
         "laya": 0.7,
         "oracle": 0.85,
-        "qwen": 0.7
+        "second": 0.75
       },
       "choice_hit_counts": {
-        "gemini": 3,
+        "first": 2,
         "jev": 2,
         "laya": 2,
-        "qwen": 2
+        "second": 3
       },
       "choice_hit_rate": {
-        "gemini": 0.6,
+        "first": 0.4,
         "jev": 0.4,
         "laya": 0.4,
-        "qwen": 0.4
+        "second": 0.6
       },
       "counts": {
         "best_fixed_in_hindsight": 15,
-        "gemini": 15,
+        "first": 14,
         "jev": 14,
         "laya": 14,
         "one_correct_only": 5,
         "oracle": 17,
-        "qwen": 14
+        "second": 15
       },
       "gap_to_oracle": {
         "jev": 0.15,
@@ -443,32 +447,32 @@
     "physics": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.75,
-        "gemini": 0.55,
+        "first": 0.75,
         "jev": 0.75,
         "laya": 0.55,
         "oracle": 0.85,
-        "qwen": 0.75
+        "second": 0.55
       },
       "choice_hit_counts": {
-        "gemini": 2,
+        "first": 6,
         "jev": 6,
         "laya": 2,
-        "qwen": 6
+        "second": 2
       },
       "choice_hit_rate": {
-        "gemini": 0.25,
+        "first": 0.75,
         "jev": 0.75,
         "laya": 0.25,
-        "qwen": 0.75
+        "second": 0.25
       },
       "counts": {
         "best_fixed_in_hindsight": 15,
-        "gemini": 11,
+        "first": 15,
         "jev": 15,
         "laya": 11,
         "one_correct_only": 8,
         "oracle": 17,
-        "qwen": 15
+        "second": 11
       },
       "gap_to_oracle": {
         "jev": 0.1,
@@ -479,32 +483,32 @@
     "psychology": {
       "accuracy": {
         "best_fixed_in_hindsight": 0.9,
-        "gemini": 0.9,
+        "first": 0.9,
         "jev": 0.9,
         "laya": 0.9,
         "oracle": 0.9,
-        "qwen": 0.9
+        "second": 0.9
       },
       "choice_hit_counts": {
-        "gemini": 0,
+        "first": 0,
         "jev": 0,
         "laya": 0,
-        "qwen": 0
+        "second": 0
       },
       "choice_hit_rate": {
-        "gemini": null,
+        "first": null,
         "jev": null,
         "laya": null,
-        "qwen": null
+        "second": null
       },
       "counts": {
         "best_fixed_in_hindsight": 18,
-        "gemini": 18,
+        "first": 18,
         "jev": 18,
         "laya": 18,
         "one_correct_only": 0,
         "oracle": 18,
-        "qwen": 18
+        "second": 18
       },
       "gap_to_oracle": {
         "jev": 0.0,
@@ -519,33 +523,33 @@
   ],
   "choice_difference_pp": 9.21052631578948,
   "choice_hit_counts": {
-    "gemini": 34,
+    "first": 42,
     "jev": 42,
     "laya": 35,
-    "qwen": 42
+    "second": 34
   },
   "choice_hit_rate": {
-    "gemini": 0.4473684210526316,
+    "first": 0.5526315789473685,
     "jev": 0.5526315789473685,
     "laya": 0.4605263157894737,
-    "qwen": 0.5526315789473685
+    "second": 0.4473684210526316
   },
   "counts": {
     "best_fixed_in_hindsight": 189,
-    "gemini": 181,
+    "first": 189,
     "jev": 189,
     "laya": 182,
     "one_correct_only": 76,
     "oracle": 223,
-    "qwen": 189
+    "second": 181
   },
   "gap_to_oracle": {
     "jev": 0.12142857142857143,
     "laya": 0.14642857142857144
   },
   "invalid_answers": {
-    "gemini": 0,
-    "qwen": 69
+    "first": 69,
+    "second": 0
   },
   "manifest_sha256": "7b71e589a822ca11af06624d8319e2840a9a6fe4e43a51e4c3e29139a4d79e6e",
   "n": 280,
@@ -570,7 +574,7 @@
     "laya": [
       [
         "convaiinnovations/laya@1c5edc17a7acd8701df6fc341c0d179f1c62c982",
-        "None"
+        null
       ]
     ],
     "qwen/qwen3.5-9b": [
@@ -615,15 +619,15 @@
       "qwen/qwen3.5-9b": 15
     }
   },
-  "shared_ledger_usd": "0.2464665944",
+  "shared_ledger_usd": "0.2911646564",
   "spend_usd": {
     "google/gemini-2.5-flash-lite": "0.007018011",
     "qwen/qwen3.5-9b": "0.1227767409",
     "typesafe/jev-1.13": "0.006562542"
   },
   "truncated_answers": {
-    "gemini": 0,
-    "qwen": 65
+    "first": 65,
+    "second": 0
   },
   "unattributed_reconciled_usd": "0.0051852185"
 }

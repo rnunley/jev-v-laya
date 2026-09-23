@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-from benchmark import GEMINI, QWEN, collect_answers, collect_routes, load, prepare, report
+from benchmark import MODEL_POOLS, collect_answers, collect_routes, load, prepare, report
 
 
 @pytest.mark.integration
@@ -14,10 +14,12 @@ from benchmark import GEMINI, QWEN, collect_answers, collect_routes, load, prepa
 def test_three_public_questions_end_to_end():
     load_dotenv(Path(__file__).resolve().parents[1] / ".env")
     assert os.environ.get("OPENROUTER_API_KEY"), "Configure the git-ignored .env before running integration"
-    run = Path("runs/integration-structured")
-    prepare(run, smoke=3)
-    collect_answers(run, QWEN, retry_errors=True, workers=2)
-    collect_answers(run, GEMINI, retry_errors=True, workers=2)
+    pool = os.environ.get("BENCHMARK_INTEGRATION_POOL", "qwen-gemini")
+    models = MODEL_POOLS[pool]
+    run = Path("runs/integration-structured" if pool == "qwen-gemini" else "runs/integration-mini-gemini")
+    prepare(run, smoke=3, candidate_pool=pool)
+    for model in models:
+        collect_answers(run, model, retry_errors=True, workers=2)
     collect_routes(run, "laya")
     collect_routes(run, "jev", retry_errors=True)
     report(run)
@@ -26,14 +28,15 @@ def test_three_public_questions_end_to_end():
     with (run / "per_prompt.csv").open(newline="") as file:
         rows = list(csv.DictReader(file))
     assert len(rows) == summary["n"] == 3
+    assert summary["candidate_models"] == list(models)
     for router in ("jev", "laya"):
         calculated = sum(row[f"{router}_correct"] == "True" for row in rows)
         assert calculated == summary["counts"][router]
         for row in rows:
             selected = row[f"{router}_selected_model"]
-            expected = selected in (QWEN, GEMINI) and row["qwen_correct" if selected == QWEN else "gemini_correct"] == "True"
+            expected = selected in models and row["first_correct" if selected == models[0] else "second_correct"] == "True"
             assert (row[f"{router}_correct"] == "True") == expected
-        distinguishing = [row for row in rows if row["qwen_correct"] != row["gemini_correct"]]
+        distinguishing = [row for row in rows if row["first_correct"] != row["second_correct"]]
         assert summary["choice_hit_counts"][router] == sum(row[f"{router}_correct"] == "True" for row in distinguishing)
     assert summary["routing_failures"] == {"jev": 0, "laya": 0}
     assert float(summary["shared_ledger_usd"]) < 5
